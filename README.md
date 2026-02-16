@@ -129,7 +129,7 @@ The CMake configuration:
 
 ### Electrical Schematic
 
-![Electrical Schematic](assets/schematic.png)
+![Electrical Schematic](assets/schematic.svg)
 
 ### Hardware Implementation
 
