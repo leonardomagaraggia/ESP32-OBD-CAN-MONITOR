@@ -204,15 +204,28 @@ The **`docs.pdf`** file contains detailed information on:
 
 ## How to Build and Flash
 
-1. **Install ESP-IDF** 2. **Clone this repository** 3. **Configure target**:
+1. **Install ESP-IDF**
+2. **Clone this repository**
+3. **Configure target**:
    ```bash
    idf.py set-target esp32
    ```
-2. **Build**:
+4. **Project Configuration**:
+   Run the configuration menu:
+   ```bash
+   idf.py menuconfig
+   ```
+   * Navigate to **Partition Table**:
+     * Select **Custom partition table CSV**.
+     * Set the filename to `partitions.csv`.
+   * Navigate to **Serial Flasher Config**:
+     * Set **Flash Size** to **4MB**.
+   * Press `Q` and then `Y` to save and exit.
+5. **Build**:
    ```bash
    idf.py build
    ```
-3. **Flash**:
+6. **Flash**:
    ```bash
    idf.py flash monitor
    ```
