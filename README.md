@@ -46,6 +46,7 @@ Main project structure:
 ```text
 assets/
 README.md
+docs.pdf
 CMakeLists.txt
 partitions.csv
 main/
@@ -137,7 +138,7 @@ Below are photos of the complete hardware assembly, including the ESP32, CAN Tra
 
 |           Top View            |       Breadboard Wiring       |
 | :---------------------------: | :---------------------------: |
-| ![HW Photo 1](assets/hw1.jpg) | ![HW Photo 2](assets/hw2.jpg) |
+| ![HW Photo 1](assets/hw1.png) | ![HW Photo 2](assets/hw2.png) |
 
 ---
 
