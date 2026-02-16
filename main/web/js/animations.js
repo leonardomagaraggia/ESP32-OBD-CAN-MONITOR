@@ -1,7 +1,6 @@
 // ============================================
 // OBD-II PROFESSIONAL ANIMATIONS ENGINE v3.0
 // Ultra-smooth real-time gauge animations
-// Optimized for 50ms updates (RPM/Speed)
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -119,7 +118,9 @@ document.addEventListener('DOMContentLoaded', function() {
         previousRpm: 2500,
         previousSpeed: 80,
         previousBattery: 13.8,
-        previousTemp: 90
+        previousTemp: 90,
+        rpmTarget: 0,
+        speedTarget: 0
     };
     
     let systemState = {
@@ -296,31 +297,41 @@ document.addEventListener('DOMContentLoaded', function() {
         // Smooth interpolation for critical values
         smoothInterpolation() {
             // Read current displayed values
-            const currentRpm = parseInt(gaugeElements.rpmValue.textContent) || currentValues.rpm;
-            const currentSpeed = parseInt(gaugeElements.speedValue.textContent) || currentValues.speed;
-            
-            // Apply interpolation
-            currentValues.rpm += (currentRpm - currentValues.rpm) * this.interpolation.rpm;
-            currentValues.speed += (currentSpeed - currentValues.speed) * this.interpolation.speed;
-            
-            // Update gauges with interpolated values
-            this.updateRPMGauge(currentValues.rpm);
-            this.updateSpeedGauge(currentValues.speed);
+            const diffRpm = currentValues.rpmTarget - currentValues.rpm;
+            if(Math.abs(diffRpm) > 0.5){
+                currentValues.rpm += diffRpm * this.interpolation.rpm;
+                this.updateRPMGauge(currentValues.rpm);
+            }
+            else
+                currentValues.rpm = currentValues.rpmTarget;
+
+                       
+            const diffSpeed = currentValues.speedTarget - currentValues.speed;
+
+            if(Math.abs(diffSpeed) > 0.5)
+            {
+                currentValues.speed += diffSpeed * this.interpolation.speed;
+                this.updateSpeedGauge(currentValues.speed);
+            }
+            else
+                currentValues.speed = currentValues.speedTarget;
         },
         
         // Update real-time values (50ms)
         updateRealTimeValues() {
             // Read current values from DOM (updated by script.js)
-            const newRpm = parseInt(gaugeElements.rpmValue.textContent) || currentValues.rpm;
-            const newSpeed = parseInt(gaugeElements.speedValue.textContent) || currentValues.speed;
+            const data = window.getOBDChartData() ? window.getOBDChartData() : null;
+
+            if(data)
+            {
+                currentValues.previousRpm = currentValues.rpm;
+                currentValues.previousSpeed = currentValues.speed;
+            }
             
-            // Store for interpolation
-            currentValues.previousRpm = currentValues.rpm;
-            currentValues.previousSpeed = currentValues.speed;
-            
-            // Update data points for rate calculation
-            this.recordDataPoint('rpm', newRpm);
-            this.recordDataPoint('speed', newSpeed);
+            if(Number.isFinite(data.rpm))
+                currentValues.rpmTarget= data.rpm
+            if(Number.isFinite(data.speed))
+                currentValues.speedTarget = data.speed;
         },
         
         // Update fast values (700ms)
