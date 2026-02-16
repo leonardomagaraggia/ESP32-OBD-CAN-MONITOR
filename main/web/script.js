@@ -1,12 +1,12 @@
 // ============================================
 // OBD-II DASHBOARD SCRIPT - Index.html compatible
-// Safe DOM mapping + JSON key fallback (no label mismatch)
+// Safe DOM mapping + JSON key fallback 
 // ============================================
 
 (() => {
   "use strict";
 
-  const POLL_MS = 200;
+  const POLL_MS = 100;
 
   // UI ranges (tuning)
   const RPM_MAX = 8000;
@@ -239,11 +239,13 @@
 
     // --- KPI RPM ---
     setText(ui.kpiRpm, fmtInt(rpm));
+
+    
     if (Number.isFinite(rpm)) {
       const pct = (clamp(rpm, 0, RPM_MAX) / RPM_MAX) * 100;
-      setWidthPct(ui.rpmOverlay, pct);
-      setWidthPct(ui.rpmIllum, pct);
-      setLeftPct(ui.rpmCursor, pct);
+     // flickeriung setWidthPct(ui.rpmOverlay, pct);
+      //setWidthPct(ui.rpmIllum, pct);
+    //  setLeftPct(ui.rpmCursor, pct);
       if (last && Number.isFinite(last.rpm)) {
         const dpct = ((rpm - last.rpm) / Math.max(last.rpm, 1)) * 100;
         setTrend(ui.rpmTrend, dpct, 0, "%");
@@ -254,9 +256,9 @@
     setText(ui.kpiSpeed, fmtInt(speed));
     if (Number.isFinite(speed)) {
       const pct = (clamp(speed, 0, SPEED_MAX) / SPEED_MAX) * 100;
-      setWidthPct(ui.speedOverlay, pct);
-      setWidthPct(ui.speedIllum, pct);
-      setLeftPct(ui.speedCursor, pct);
+      //setWidthPct(ui.speedOverlay, pct);
+      //setWidthPct(ui.speedIllum, pct);
+      //setLeftPct(ui.speedCursor, pct);
       if (last && Number.isFinite(last.speed)) {
         const dpct = ((speed - last.speed) / Math.max(last.speed, 1)) * 100;
         setTrend(ui.speedTrend, dpct, 0, "%");
