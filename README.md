@@ -236,10 +236,13 @@ The **`docs.pdf`** file contains detailed information on:
 - **DASHBOARD URL**: `http://192.168.4.1`
 
 ---
-
 ## Disclaimer
 
-This project is intended for **educational and research purposes**. Use at your own risk when connecting to a vehicle CAN bus. Improper usage may interfere with vehicle electronics.
+This project is **fully functional** and tested in its default configuration.
+
+However, please be aware that **improper modifications** to the source files or the electronic hardware setup can lead to anomalous and harmful behavior.
+
+**CRITICAL WARNING:** Incorrect wiring or hardware configuration poses a significant risk of **short circuits** to the vehicle's power supply. Ensure all electronic connections are verified and compliant before connecting to the vehicle.
 
 ---
 
