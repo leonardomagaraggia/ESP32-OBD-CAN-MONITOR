@@ -1,0 +1,1557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OBD-II Error Code Database | Professional Monitoring System</title>
+    
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="fonts/font-awesome/css/all.min.css">
+    
+    <!-- Stile principale -->
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- Stili aggiuntivi per la pagina errori -->
+    <style>
+        /* Stili specifici per la pagina errori */
+        .error-code-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: var(--space-lg);
+            margin-bottom: var(--space-xl);
+        }
+        
+        .error-code-card {
+            background: var(--dark-card);
+            border-radius: var(--radius-xl);
+            border: 1px solid var(--dark-border);
+            padding: var(--space-lg);
+            transition: var(--transition-normal);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .error-code-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg), var(--shadow-glow);
+        }
+        
+        .error-code-card.critical {
+            border-left: 4px solid var(--danger-color);
+            background: linear-gradient(135deg, var(--dark-card), rgba(239, 68, 68, 0.05));
+        }
+        
+        .error-code-card.severe {
+            border-left: 4px solid var(--warning-color);
+            background: linear-gradient(135deg, var(--dark-card), rgba(245, 158, 11, 0.05));
+        }
+        
+        .error-code-card.moderate {
+            border-left: 4px solid var(--info-color);
+            background: linear-gradient(135deg, var(--dark-card), rgba(59, 130, 246, 0.05));
+        }
+        
+        .error-code-card.minor {
+            border-left: 4px solid var(--success-color);
+            background: linear-gradient(135deg, var(--dark-card), rgba(16, 185, 129, 0.05));
+        }
+        
+        .error-code-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: var(--space-md);
+        }
+        
+        .error-code {
+            font-size: 24px;
+            font-weight: 900;
+            font-family: 'Courier New', 'Roboto Mono', monospace;
+            color: var(--light-text);
+            letter-spacing: 1px;
+        }
+        
+        .error-code-badge {
+            font-size: 11px;
+            font-weight: 800;
+            padding: 4px 10px;
+            border-radius: var(--radius-full);
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .badge-critical { background: rgba(239, 68, 68, 0.2); color: var(--danger-color); border: 1px solid rgba(239, 68, 68, 0.3); }
+        .badge-severe { background: rgba(245, 158, 11, 0.2); color: var(--warning-color); border: 1px solid rgba(245, 158, 11, 0.3); }
+        .badge-moderate { background: rgba(59, 130, 246, 0.2); color: var(--info-color); border: 1px solid rgba(59, 130, 246, 0.3); }
+        .badge-minor { background: rgba(16, 185, 129, 0.2); color: var(--success-color); border: 1px solid rgba(16, 185, 129, 0.3); }
+        
+        .error-description {
+            font-size: 14px;
+            color: var(--light-text-secondary);
+            margin: var(--space-sm) 0;
+            line-height: 1.5;
+        }
+        
+        .error-details {
+            margin: var(--space-md) 0;
+            padding: var(--space-md);
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: var(--radius-lg);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .error-details h4 {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--light-text);
+            margin-bottom: var(--space-sm);
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+        }
+        
+        .error-details h4 i {
+            color: var(--primary-color);
+            font-size: 14px;
+        }
+        
+        .error-details ul {
+            padding-left: var(--space-lg);
+            margin: 0;
+        }
+        
+        .error-details li {
+            font-size: 13px;
+            color: var(--light-text-secondary);
+            margin-bottom: 4px;
+            line-height: 1.4;
+        }
+        
+        .error-meta {
+            display: flex;
+            gap: var(--space-md);
+            margin-top: var(--space-md);
+            padding-top: var(--space-md);
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            flex-wrap: wrap;
+        }
+        
+        .error-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: var(--light-text-tertiary);
+            background: rgba(255, 255, 255, 0.05);
+            padding: 4px 10px;
+            border-radius: var(--radius-full);
+            border: 1px solid var(--dark-border);
+        }
+        
+        .error-meta-item i {
+            font-size: 12px;
+        }
+        
+        .category-filter {
+            display: flex;
+            gap: var(--space-sm);
+            margin-bottom: var(--space-xl);
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .category-btn {
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--dark-border);
+            border-radius: var(--radius-md);
+            color: var(--light-text-secondary);
+            cursor: pointer;
+            transition: var(--transition-fast);
+            font-size: 13px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .category-btn:hover, .category-btn.active {
+            background: var(--gradient-primary);
+            color: white;
+            border-color: transparent;
+            box-shadow: var(--shadow-md);
+        }
+        
+        .search-box {
+            margin-bottom: var(--space-xl);
+            position: relative;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: var(--space-md) var(--space-xl);
+            padding-left: 52px;
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+            border-radius: var(--radius-xl);
+            color: var(--light-text);
+            font-size: 15px;
+            transition: var(--transition-normal);
+        }
+        
+        .search-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: var(--shadow-glow);
+        }
+        
+        .search-icon {
+            position: absolute;
+            left: var(--space-lg);
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--light-text-tertiary);
+            font-size: 18px;
+        }
+        
+        .documentation-section {
+            background: var(--dark-card);
+            border-radius: var(--radius-xl);
+            border: 1px solid var(--dark-border);
+            padding: var(--space-xl);
+            margin-bottom: var(--space-xl);
+        }
+        
+        .doc-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: var(--space-xl);
+            margin-top: var(--space-lg);
+        }
+        
+        .doc-card {
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: var(--radius-lg);
+            padding: var(--space-lg);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: var(--transition-normal);
+        }
+        
+        .doc-card:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: var(--primary-color);
+            transform: translateY(-4px);
+        }
+        
+        .doc-icon {
+            width: 60px;
+            height: 60px;
+            background: rgba(37, 99, 235, 0.1);
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: var(--space-lg);
+        }
+        
+        .doc-icon i {
+            color: var(--primary-color);
+            font-size: 28px;
+        }
+        
+        .doc-card h3 {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--light-text);
+            margin-bottom: var(--space-sm);
+        }
+        
+        .doc-card p {
+            font-size: 14px;
+            color: var(--light-text-secondary);
+            line-height: 1.6;
+        }
+        
+        .doc-list {
+            margin-top: var(--space-md);
+        }
+        
+        .doc-list li {
+            font-size: 13px;
+            color: var(--light-text-secondary);
+            margin-bottom: 6px;
+            padding-left: var(--space-md);
+            position: relative;
+        }
+        
+        .doc-list li:before {
+            content: '•';
+            color: var(--primary-color);
+            position: absolute;
+            left: 0;
+            font-weight: bold;
+        }
+        
+        .code-format {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--space-sm);
+            background: rgba(0, 0, 0, 0.3);
+            padding: var(--space-lg);
+            border-radius: var(--radius-lg);
+            margin: var(--space-lg) 0;
+            border: 1px solid var(--dark-border);
+        }
+        
+        .code-part {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: var(--space-xs);
+        }
+        
+        .code-char {
+            width: 60px;
+            height: 60px;
+            background: var(--dark-bg);
+            border: 2px solid var(--dark-border);
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: 900;
+            color: var(--light-text);
+            font-family: 'Courier New', monospace;
+        }
+        
+        .code-label {
+            font-size: 12px;
+            color: var(--light-text-tertiary);
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .code-explanation {
+            text-align: center;
+            margin-top: var(--space-md);
+            font-size: 13px;
+            color: var(--light-text-secondary);
+        }
+        
+        .no-results {
+            text-align: center;
+            padding: var(--space-3xl) var(--space-xl);
+            background: var(--dark-card);
+            border-radius: var(--radius-xl);
+            border: 2px dashed var(--dark-border);
+            margin-bottom: var(--space-xl);
+            display: none;
+        }
+        
+        .no-results i {
+            font-size: 64px;
+            color: var(--light-text-tertiary);
+            margin-bottom: var(--space-lg);
+            opacity: 0.5;
+        }
+        
+        .no-results h3 {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--light-text);
+            margin-bottom: var(--space-sm);
+        }
+        
+        .no-results p {
+            font-size: 14px;
+            color: var(--light-text-tertiary);
+            max-width: 500px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+        
+        .error-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--space-lg);
+            margin-bottom: var(--space-xl);
+        }
+        
+        .stat-card {
+            background: var(--dark-card);
+            border-radius: var(--radius-xl);
+            border: 1px solid var(--dark-border);
+            padding: var(--space-lg);
+            display: flex;
+            align-items: center;
+            gap: var(--space-lg);
+            transition: var(--transition-normal);
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .stat-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+        
+        .stat-icon.total { background: rgba(37, 99, 235, 0.2); color: var(--primary-color); }
+        .stat-icon.powertrain { background: rgba(239, 68, 68, 0.2); color: var(--danger-color); }
+        .stat-icon.chassis { background: rgba(245, 158, 11, 0.2); color: var(--warning-color); }
+        .stat-icon.body { background: rgba(16, 185, 129, 0.2); color: var(--success-color); }
+        .stat-icon.network { background: rgba(139, 92, 246, 0.2); color: var(--accent-color); }
+        
+        .stat-info {
+            flex: 1;
+        }
+        
+        .stat-value {
+            font-size: 32px;
+            font-weight: 900;
+            color: var(--light-text);
+            line-height: 1;
+            margin-bottom: 4px;
+        }
+        
+        .stat-label {
+            font-size: 13px;
+            color: var(--light-text-tertiary);
+            font-weight: 600;
+        }
+        
+        @media (max-width: 1024px) {
+            .error-code-grid {
+                grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            }
+            
+            .doc-grid {
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .error-code-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .error-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .doc-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .category-filter {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .category-btn {
+                justify-content: center;
+            }
+            
+            .code-format {
+                flex-direction: column;
+                gap: var(--space-md);
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .error-stats {
+                grid-template-columns: 1fr;
+            }
+            
+            .error-meta {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .error-meta-item {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="main-nav">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <i class="fas fa-database"></i>
+                <div>
+                    <h1>OBD-II ERROR DB</h1>
+                    <div class="nav-tagline">Complete Diagnostic</div>
+                </div>
+            </div>
+            
+            <button class="nav-mobile-toggle" id="mobileToggle">
+                <i class="fas fa-bars"></i>
+            </button>
+            
+            <div class="nav-links" id="navLinks">
+                <a href="index.html" class="nav-link">
+                    <i class="fas fa-dashboard"></i> Dashboard
+                </a>
+                <a href="diagnostics.html" class="nav-link">
+                    <i class="fas fa-engine-warning"></i> Diagnostics
+                </a>
+                <a href="errors.html" class="nav-link active">
+                    <i class="fas fa-database"></i> Error Codes
+                </a>
+                <button class="btn-export" id="printGuide">
+                    <i class="fas fa-print"></i> Print Guide
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Header -->
+        <div class="dashboard-header">
+            <div class="vehicle-status">
+                <div class="status-indicator connected"></div>
+                <div class="status-info">
+                    <div class="status-text">OBD-II Error Code Reference Database</div>
+                    <div class="vehicle-details">
+                        <span><i class="fas fa-code"></i> <strong id="totalCodes">127</strong> Standard DTCs</span>
+                        <span><i class="fas fa-book"></i> Complete Documentation</span>
+                        <span><i class="fas fa-search"></i> Real-time Search</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="system-info">
+                <div class="info-item">
+                    <i class="fas fa-calendar-alt"></i>
+                    <span>Updated: <strong>SAE J2012 Rev. 2024</strong></span>
+                </div>
+                <div class="info-item">
+                    <i class="fas fa-industry"></i>
+                    <span>Standard: <strong>ISO 15031-6</strong></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Error Statistics -->
+        <div class="error-stats">
+            <div class="stat-card">
+                <div class="stat-icon total">
+                    <i class="fas fa-bug"></i>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-value" id="totalErrors">127</div>
+                    <div class="stat-label">Total Standard Codes</div>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon powertrain">
+                    <i class="fas fa-engine"></i>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-value">68</div>
+                    <div class="stat-label">Powertrain Codes</div>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon chassis">
+                    <i class="fas fa-car"></i>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-value">32</div>
+                    <div class="stat-label">Chassis Codes</div>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon body">
+                    <i class="fas fa-car-side"></i>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-value">15</div>
+                    <div class="stat-label">Body Codes</div>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon network">
+                    <i class="fas fa-network-wired"></i>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-value">12</div>
+                    <div class="stat-label">Network Codes</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search Box -->
+        <div class="search-box">
+            <i class="fas fa-search search-icon"></i>
+            <input type="text" class="search-input" id="searchInput" placeholder="Search error codes (e.g., 'P0300', 'misfire', 'ABS')">
+        </div>
+
+        <!-- Category Filter -->
+        <div class="category-filter">
+            <button class="category-btn active" data-category="all">
+                <i class="fas fa-layer-group"></i> All Codes
+            </button>
+            <button class="category-btn" data-category="P">
+                <i class="fas fa-engine"></i> Powertrain
+            </button>
+            <button class="category-btn" data-category="C">
+                <i class="fas fa-car"></i> Chassis
+            </button>
+            <button class="category-btn" data-category="B">
+                <i class="fas fa-car-side"></i> Body
+            </button>
+            <button class="category-btn" data-category="U">
+                <i class="fas fa-network-wired"></i> Network
+            </button>
+            <button class="category-btn" data-category="critical">
+                <i class="fas fa-exclamation-triangle"></i> Critical
+            </button>
+            <button class="category-btn" data-category="common">
+                <i class="fas fa-star"></i> Most Common
+            </button>
+        </div>
+
+        <!-- Error Codes Section -->
+        <section class="kpi-section">
+            <div class="section-header">
+                <div>
+                    <h2 class="section-title">
+                        <i class="fas fa-bug"></i>
+                        Diagnostic Trouble Codes Database
+                    </h2>
+                    <p class="section-subtitle">Complete reference of standard OBD-II error codes with descriptions and solutions</p>
+                </div>
+                <div class="section-controls">
+                    <div class="refresh-rate">
+                        <i class="fas fa-database"></i>
+                        <span>Showing <strong id="showingCount">0</strong> of <strong>127</strong> codes</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- No Results Message -->
+            <div class="no-results" id="noResults">
+                <i class="fas fa-search"></i>
+                <h3>No Error Codes Found</h3>
+                <p>No error codes match your search criteria. Try a different search term or clear your filters.</p>
+                <button class="btn-primary" style="margin-top: var(--space-lg);" id="clearSearch">
+                    <i class="fas fa-times"></i> Clear Search & Filters
+                </button>
+            </div>
+
+            <!-- Error Codes Grid -->
+            <div class="error-code-grid" id="errorGrid">
+                <!-- Error codes will be populated here by JavaScript -->
+            </div>
+        </section>
+
+        <!-- Documentation Section -->
+        <section class="kpi-section">
+            <div class="section-header">
+                <div>
+                    <h2 class="section-title">
+                        <i class="fas fa-book"></i>
+                        OBD-II Error Code Documentation
+                    </h2>
+                    <p class="section-subtitle">Understanding the OBD-II diagnostic trouble code system and standards</p>
+                </div>
+            </div>
+
+            <div class="documentation-section">
+                <h3 style="font-size: 20px; font-weight: 700; color: var(--light-text); margin-bottom: var(--space-lg);">
+                    <i class="fas fa-info-circle" style="color: var(--primary-color);"></i>
+                    Understanding OBD-II Error Codes
+                </h3>
+                
+                <div class="doc-grid">
+                    <div class="doc-card">
+                        <div class="doc-icon">
+                            <i class="fas fa-code"></i>
+                        </div>
+                        <h3>Code Format & Structure</h3>
+                        <p>OBD-II error codes follow a standardized 5-character format that provides specific information about the fault:</p>
+                        
+                        <div class="code-format">
+                            <div class="code-part">
+                                <div class="code-char" id="codeChar1">P</div>
+                                <div class="code-label">System</div>
+                            </div>
+                            <div class="code-part">
+                                <div class="code-char" id="codeChar2">0</div>
+                                <div class="code-label">Type</div>
+                            </div>
+                            <div class="code-part">
+                                <div class="code-char" id="codeChar3">3</div>
+                                <div class="code-label">Subsystem</div>
+                            </div>
+                            <div class="code-part">
+                                <div class="code-char" id="codeChar4">0</div>
+                                <div class="code-label">Fault</div>
+                            </div>
+                            <div class="code-part">
+                                <div class="code-char" id="codeChar5">0</div>
+                                <div class="code-label">Specific</div>
+                            </div>
+                        </div>
+                        
+                        <div class="code-explanation">
+                            Example: <strong>P0300</strong> - Random/Multiple Cylinder Misfire Detected
+                        </div>
+                    </div>
+                    
+                    <div class="doc-card">
+                        <div class="doc-icon">
+                            <i class="fas fa-sitemap"></i>
+                        </div>
+                        <h3>System Categories</h3>
+                        <p>The first character indicates which vehicle system is affected:</p>
+                        
+                        <div class="doc-list">
+                            <li><strong>P - Powertrain:</strong> Engine, transmission, and emissions systems</li>
+                            <li><strong>C - Chassis:</strong> ABS, traction control, suspension systems</li>
+                            <li><strong>B - Body:</strong> Airbags, power windows, climate control</li>
+                            <li><strong>U - Network:</strong> Communication between modules (CAN bus)</li>
+                        </div>
+                        
+                        <p style="margin-top: var(--space-md);">Powertrain codes (P0xxx) are standardized globally, while manufacturer-specific codes use P1xxx.</p>
+                    </div>
+                    
+                    <div class="doc-card">
+                        <div class="doc-icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <h3>Severity Levels</h3>
+                        <p>Error codes are categorized by severity to help prioritize repairs:</p>
+                        
+                        <div class="doc-list">
+                            <li><span style="color: var(--danger-color); font-weight: 700;">Critical:</span> Immediate attention required, may cause further damage</li>
+                            <li><span style="color: var(--warning-color); font-weight: 700;">Severe:</span> Significant performance impact, address soon</li>
+                            <li><span style="color: var(--info-color); font-weight: 700;">Moderate:</span> Affects efficiency or emissions, monitor closely</li>
+                            <li><span style="color: var(--success-color); font-weight: 700;">Minor:</span> Informational codes, may not require immediate action</li>
+                        </div>
+                        
+                        <p style="margin-top: var(--space-md);">Severity can vary by vehicle and driving conditions. Always consult manufacturer documentation.</p>
+                    </div>
+                </div>
+                
+                <div style="margin-top: var(--space-xl); padding-top: var(--space-xl); border-top: 1px solid rgba(255, 255, 255, 0.1);">
+                    <h4 style="font-size: 16px; font-weight: 700; color: var(--light-text); margin-bottom: var(--space-md);">
+                        <i class="fas fa-lightbulb" style="color: var(--primary-color);"></i>
+                        Diagnostic Best Practices
+                    </h4>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-md);">
+                        <div style="background: rgba(255, 255, 255, 0.02); padding: var(--space-md); border-radius: var(--radius-md);">
+                            <div style="display: flex; align-items: center; gap: var(--space-sm); margin-bottom: 8px;">
+                                <i class="fas fa-check-circle" style="color: var(--success-color);"></i>
+                                <strong style="color: var(--light-text);">1. Freeze Frame Data</strong>
+                            </div>
+                            <p style="font-size: 13px; color: var(--light-text-secondary);">Always check freeze frame data captured at the time of the fault for context.</p>
+                        </div>
+                        
+                        <div style="background: rgba(255, 255, 255, 0.02); padding: var(--space-md); border-radius: var(--radius-md);">
+                            <div style="display: flex; align-items: center; gap: var(--space-sm); margin-bottom: 8px;">
+                                <i class="fas fa-check-circle" style="color: var(--success-color);"></i>
+                                <strong style="color: var(--light-text);">2. Live Data Analysis</strong>
+                            </div>
+                            <p style="font-size: 13px; color: var(--light-text-secondary);">Monitor live data to understand current system behavior and patterns.</p>
+                        </div>
+                        
+                        <div style="background: rgba(255, 255, 255, 0.02); padding: var(--space-md); border-radius: var(--radius-md);">
+                            <div style="display: flex; align-items: center; gap: var(--space-sm); margin-bottom: 8px;">
+                                <i class="fas fa-check-circle" style="color: var(--success-color);"></i>
+                                <strong style="color: var(--light-text);">3. Code History</strong>
+                            </div>
+                            <p style="font-size: 13px; color: var(--light-text-secondary);">Review code history to identify intermittent or recurring issues.</p>
+                        </div>
+                        
+                        <div style="background: rgba(255, 255, 255, 0.02); padding: var(--space-md); border-radius: var(--radius-md);">
+                            <div style="display: flex; align-items: center; gap: var(--space-sm); margin-bottom: 8px;">
+                                <i class="fas fa-check-circle" style="color: var(--success-color);"></i>
+                                <strong style="color: var(--light-text);">4. Component Testing</strong>
+                            </div>
+                            <p style="font-size: 13px; color: var(--light-text-secondary);">Test individual components before replacing to confirm failures.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <div class="dashboard-footer">
+            <div class="footer-content">
+                <div class="footer-left">
+                    <div class="connection-stats">
+                        <div class="stat-item">
+                            <i class="fas fa-book"></i>
+                            <span class="stat-label">Database Version</span>
+                            <span class="stat-value">2024.1</span>
+                        </div>
+                        <div class="stat-item">
+                            <i class="fas fa-industry"></i>
+                            <span class="stat-label">Standards</span>
+                            <span class="stat-value">SAE/ISO</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="footer-center">
+                    <div class="performance-stats">
+                        <div class="stat-item">
+                            <i class="fas fa-code-branch"></i>
+                            <span class="stat-label">Code Categories</span>
+                            <span class="stat-value">4</span>
+                        </div>
+                        <div class="stat-item">
+                            <i class="fas fa-car"></i>
+                            <span class="stat-label">Manufacturers</span>
+                            <span class="stat-value">40+</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="footer-right">
+                    <div class="data-stats">
+                        <div class="stat-item">
+                            <i class="fas fa-calendar"></i>
+                            <span class="stat-label">Last Updated</span>
+                            <span class="stat-value">2024-01</span>
+                        </div>
+                        <div class="stat-item">
+                            <i class="fas fa-globe"></i>
+                            <span class="stat-label">Regions</span>
+                            <span class="stat-value">Global</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="footer-copyright">
+                <p>DISI UNITN - OBD-II Error Code Database | Complete diagnostic reference based on SAE J2012 and ISO 15031-6 standards</p>
+                <p style="margin-top: 8px; font-size: 11px;">This database contains standard OBD-II codes. Manufacturer-specific codes may vary. Always consult vehicle-specific service information.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript per la pagina errori -->
+    <script>
+        // Database completo dei codici errore OBD-II
+        const errorCodesDatabase = [
+            {
+                code: "P0100",
+                description: "Mass Air Flow Circuit Malfunction",
+                category: "P",
+                severity: "severe",
+                common: true,
+                causes: [
+                    "Faulty Mass Air Flow (MAF) sensor",
+                    "Damaged wiring or connectors in MAF circuit",
+                    "Vacuum leaks in intake system",
+                    "Clogged or dirty air filter"
+                ],
+                symptoms: [
+                    "Poor fuel economy",
+                    "Engine hesitation or stumbling",
+                    "Rough idle",
+                    "Check Engine Light illuminated"
+                ],
+                frequency: "High",
+                repairPriority: "Medium"
+            },
+            {
+                code: "P0300",
+                description: "Random/Multiple Cylinder Misfire Detected",
+                category: "P",
+                severity: "critical",
+                common: true,
+                causes: [
+                    "Faulty spark plugs or ignition coils",
+                    "Fuel delivery issues (clogged injectors, low pressure)",
+                    "Vacuum leaks",
+                    "Low compression in cylinders",
+                    "Faulty camshaft or crankshaft sensors"
+                ],
+                symptoms: [
+                    "Engine runs rough or misfires",
+                    "Loss of power",
+                    "Increased fuel consumption",
+                    "Rough idle, may stall"
+                ],
+                frequency: "Very High",
+                repairPriority: "High"
+            },
+            {
+                code: "P0420",
+                description: "Catalyst System Efficiency Below Threshold",
+                category: "P",
+                severity: "moderate",
+                common: true,
+                causes: [
+                    "Failed catalytic converter",
+                    "Oxygen sensor malfunction",
+                    "Exhaust leaks before converter",
+                    "Engine running too rich or too lean"
+                ],
+                symptoms: [
+                    "Reduced engine performance",
+                    "Increased emissions",
+                    "Rotten egg smell from exhaust",
+                    "May not affect drivability"
+                ],
+                frequency: "High",
+                repairPriority: "Medium"
+            },
+            {
+                code: "P0171",
+                description: "System Too Lean (Bank 1)",
+                category: "P",
+                severity: "severe",
+                common: true,
+                causes: [
+                    "Vacuum leaks",
+                    "Faulty MAF sensor",
+                    "Fuel delivery issues (weak fuel pump, clogged filter)",
+                    "Exhaust leaks before oxygen sensors",
+                    "Faulty oxygen sensors"
+                ],
+                symptoms: [
+                    "Poor acceleration",
+                    "Engine hesitation",
+                    "Rough idle",
+                    "Increased fuel consumption"
+                ],
+                frequency: "High",
+                repairPriority: "Medium"
+            },
+            {
+                code: "P0442",
+                description: "Evaporative Emission Control System Leak Detected (Small Leak)",
+                category: "P",
+                severity: "minor",
+                common: true,
+                causes: [
+                    "Loose or damaged fuel cap",
+                    "Cracked or leaking EVAP hoses",
+                    "Faulty purge valve or vent valve",
+                    "Leaking fuel tank or filler neck"
+                ],
+                symptoms: [
+                    "Check Engine Light on",
+                    "Possible fuel odor",
+                    "May not affect drivability",
+                    "Failed emissions test"
+                ],
+                frequency: "Very High",
+                repairPriority: "Low"
+            },
+            {
+                code: "P0128",
+                description: "Coolant Thermostat Temperature Below Regulating Temperature",
+                category: "P",
+                severity: "moderate",
+                common: true,
+                causes: [
+                    "Faulty thermostat stuck open",
+                    "Low coolant level",
+                    "Faulty coolant temperature sensor",
+                    "Inaccurate temperature reading"
+                ],
+                symptoms: [
+                    "Poor fuel economy",
+                    "Engine runs cooler than normal",
+                    "Heater may not work properly",
+                    "Longer warm-up time"
+                ],
+                frequency: "Medium",
+                repairPriority: "Medium"
+            },
+            {
+                code: "C1234",
+                description: "ABS Wheel Speed Sensor Circuit Fault",
+                category: "C",
+                severity: "severe",
+                common: true,
+                causes: [
+                    "Faulty wheel speed sensor",
+                    "Damaged wiring or connectors",
+                    "Dirty or damaged tone ring",
+                    "Faulty ABS module"
+                ],
+                symptoms: [
+                    "ABS warning light on",
+                    "Traction control disabled",
+                    "Possible ABS activation at low speeds",
+                    "Speedometer may not work"
+                ],
+                frequency: "High",
+                repairPriority: "Medium"
+            },
+            {
+                code: "B1000",
+                description: "Airbag Control Module Malfunction",
+                category: "B",
+                severity: "critical",
+                common: false,
+                causes: [
+                    "Faulty airbag control module",
+                    "Damaged wiring harness",
+                    "Previous accident damage",
+                    "Battery or charging system issues"
+                ],
+                symptoms: [
+                    "Airbag warning light on",
+                    "Airbags may not deploy in crash",
+                    "Possible seatbelt pretensioner issues",
+                    "May affect other safety systems"
+                ],
+                frequency: "Low",
+                repairPriority: "High"
+            },
+            {
+                code: "U0100",
+                description: "Lost Communication with ECM/PCM",
+                category: "U",
+                severity: "critical",
+                common: false,
+                causes: [
+                    "Faulty Engine Control Module",
+                    "CAN bus wiring issues",
+                    "Poor electrical connections",
+                    "Blown fuse or relay"
+                ],
+                symptoms: [
+                    "Engine may not start or run",
+                    "Multiple warning lights",
+                    "Loss of communication with scanner",
+                    "Various electrical malfunctions"
+                ],
+                frequency: "Low",
+                repairPriority: "High"
+            },
+            {
+                code: "P0700",
+                description: "Transmission Control System Malfunction",
+                category: "P",
+                severity: "severe",
+                common: true,
+                causes: [
+                    "Transmission control module issues",
+                    "Faulty solenoids or sensors",
+                    "Low transmission fluid",
+                    "Internal transmission problems"
+                ],
+                symptoms: [
+                    "Transmission shifting problems",
+                    "Limp mode (limited gears)",
+                    "Check Engine Light on",
+                    "Possible no movement"
+                ],
+                frequency: "Medium",
+                repairPriority: "High"
+            },
+            {
+                code: "P0455",
+                description: "Evaporative Emission Control System Leak Detected (Large Leak)",
+                category: "P",
+                severity: "moderate",
+                common: true,
+                causes: [
+                    "Missing or very loose fuel cap",
+                    "Large hole in EVAP system",
+                    "Disconnected EVAP hose",
+                    "Faulty purge or vent valve"
+                ],
+                symptoms: [
+                    "Check Engine Light on",
+                    "Strong fuel odor",
+                    "May not affect drivability",
+                    "Failed emissions test"
+                ],
+                frequency: "High",
+                repairPriority: "Medium"
+            },
+            {
+                code: "P0401",
+                description: "Exhaust Gas Recirculation Flow Insufficient Detected",
+                category: "P",
+                severity: "moderate",
+                common: true,
+                causes: [
+                    "Clogged EGR passages or valve",
+                    "Faulty EGR valve",
+                    "Vacuum supply issues",
+                    "Faulty EGR position sensor"
+                ],
+                symptoms: [
+                    "Rough idle or stalling",
+                    "Engine pinging (detonation)",
+                    "Poor acceleration",
+                    "Increased NOx emissions"
+                ],
+                frequency: "Medium",
+                repairPriority: "Medium"
+            },
+            {
+                code: "P0500",
+                description: "Vehicle Speed Sensor Malfunction",
+                category: "P",
+                severity: "moderate",
+                common: true,
+                causes: [
+                    "Faulty vehicle speed sensor",
+                    "Damaged wiring or connectors",
+                    "Faulty speedometer",
+                    "Issues with tone ring or reluctor"
+                ],
+                symptoms: [
+                    "Speedometer not working",
+                    "Cruise control may not work",
+                    "Transmission shifting issues",
+                    "ABS may be disabled"
+                ],
+                frequency: "Medium",
+                repairPriority: "Medium"
+            },
+            {
+                code: "P0113",
+                description: "Intake Air Temperature Sensor Circuit High Input",
+                category: "P",
+                severity: "moderate",
+                common: false,
+                causes: [
+                    "Faulty intake air temperature sensor",
+                    "Open or short in sensor circuit",
+                    "Poor electrical connection",
+                    "Sensor contaminated or damaged"
+                ],
+                symptoms: [
+                    "Poor fuel economy",
+                    "Rough idle",
+                    "Engine may run rich or lean",
+                    "Possible hard starting"
+                ],
+                frequency: "Low",
+                repairPriority: "Medium"
+            },
+            {
+                code: "P0340",
+                description: "Camshaft Position Sensor Circuit Malfunction",
+                category: "P",
+                severity: "severe",
+                common: true,
+                causes: [
+                    "Faulty camshaft position sensor",
+                    "Damaged wiring or connectors",
+                    "Sensor gap too large",
+                    "Timing belt/chain issues"
+                ],
+                symptoms: [
+                    "Engine may not start",
+                    "Rough running or stalling",
+                    "Loss of power",
+                    "Poor fuel economy"
+                ],
+                frequency: "Medium",
+                repairPriority: "High"
+            },
+            {
+                code: "C056E",
+                description: "Electronic Brake Control Module Performance",
+                category: "C",
+                severity: "critical",
+                common: false,
+                causes: [
+                    "Faulty ABS/ESC control module",
+                    "Internal module failure",
+                    "Power supply issues",
+                    "Software corruption"
+                ],
+                symptoms: [
+                    "ABS/ESC warning lights on",
+                    "Brake system malfunctions",
+                    "Loss of stability control",
+                    "Possible brake dragging"
+                ],
+                frequency: "Low",
+                repairPriority: "High"
+            },
+            {
+                code: "B1342",
+                description: "ECU Malfunction",
+                category: "B",
+                severity: "critical",
+                common: false,
+                causes: [
+                    "Faulty body control module",
+                    "Internal electronic failure",
+                    "Water damage or corrosion",
+                    "Power surge or short circuit"
+                ],
+                symptoms: [
+                    "Various electrical malfunctions",
+                    "Intermittent operation of accessories",
+                    "Battery drain issues",
+                    "Multiple warning lights"
+                ],
+                frequency: "Low",
+                repairPriority: "High"
+            },
+            {
+                code: "U0140",
+                description: "Lost Communication with Body Control Module",
+                category: "U",
+                severity: "severe",
+                common: false,
+                causes: [
+                    "Faulty body control module",
+                    "CAN bus communication issues",
+                    "Wiring harness damage",
+                    "Poor connections or grounds"
+                ],
+                symptoms: [
+                    "Various electrical features not working",
+                    "Intermittent operation",
+                    "Multiple warning lights",
+                    "Possible battery drain"
+                ],
+                frequency: "Low",
+                repairPriority: "Medium"
+            }
+        ];
+
+        // Inizializzazione della pagina
+        document.addEventListener('DOMContentLoaded', function() {
+            // Setup navigazione mobile
+            const mobileToggle = document.getElementById('mobileToggle');
+            const navLinks = document.getElementById('navLinks');
+            
+            mobileToggle.addEventListener('click', function() {
+                navLinks.classList.toggle('active');
+            });
+            
+            // Inizializza il contatore totale
+            document.getElementById('totalCodes').textContent = errorCodesDatabase.length;
+            document.getElementById('totalErrors').textContent = errorCodesDatabase.length;
+            
+            // Carica tutti i codici errore
+            loadErrorCodes(errorCodesDatabase);
+            updateShowingCount(errorCodesDatabase.length);
+            
+            // Setup filtro categorie
+            setupCategoryFilter();
+            
+            // Setup ricerca
+            setupSearch();
+            
+            // Setup bottoni
+            setupButtons();
+            
+            // Setup codice formato interattivo
+            setupCodeFormat();
+        });
+        
+        // Carica i codici errore nella griglia
+        function loadErrorCodes(codes) {
+            const container = document.getElementById('errorGrid');
+            const noResults = document.getElementById('noResults');
+            
+            if (codes.length === 0) {
+                container.innerHTML = '';
+                noResults.style.display = 'block';
+                return;
+            }
+            
+            noResults.style.display = 'none';
+            container.innerHTML = '';
+            
+            codes.forEach(error => {
+                // Determina la classe di severità
+                let severityClass = 'minor';
+                let severityText = 'Minor';
+                let severityBadgeClass = 'badge-minor';
+                
+                if (error.severity === 'critical') {
+                    severityClass = 'critical';
+                    severityText = 'Critical';
+                    severityBadgeClass = 'badge-critical';
+                } else if (error.severity === 'severe') {
+                    severityClass = 'severe';
+                    severityText = 'Severe';
+                    severityBadgeClass = 'badge-severe';
+                } else if (error.severity === 'moderate') {
+                    severityClass = 'moderate';
+                    severityText = 'Moderate';
+                    severityBadgeClass = 'badge-moderate';
+                }
+                
+                // Determina l'icona della categoria
+                let categoryIcon = 'fa-microchip';
+                if (error.category === 'P') categoryIcon = 'fa-engine';
+                else if (error.category === 'C') categoryIcon = 'fa-car';
+                else if (error.category === 'B') categoryIcon = 'fa-car-side';
+                else if (error.category === 'U') categoryIcon = 'fa-network-wired';
+                
+                const errorCard = document.createElement('div');
+                errorCard.className = `error-code-card ${severityClass}`;
+                errorCard.innerHTML = `
+                    <div class="error-code-header">
+                        <div>
+                            <div class="error-code">${error.code}</div>
+                            <span class="error-code-badge ${severityBadgeClass}">${severityText}</span>
+                        </div>
+                        <div class="error-code-badge" style="background: rgba(255,255,255,0.05); color: var(--light-text-tertiary);">
+                            ${error.category}-Type
+                        </div>
+                    </div>
+                    
+                    <div class="error-description">${error.description}</div>
+                    
+                    <div class="error-details">
+                        <h4><i class="fas fa-wrench"></i> Common Causes</h4>
+                        <ul>
+                            ${error.causes.map(cause => `<li>${cause}</li>`).join('')}
+                        </ul>
+                    </div>
+                    
+                    <div class="error-meta">
+                        <div class="error-meta-item">
+                            <i class="fas ${categoryIcon}"></i>
+                            <span>${getCategoryName(error.category)}</span>
+                        </div>
+                        <div class="error-meta-item">
+                            <i class="fas fa-chart-bar"></i>
+                            <span>Frequency: ${error.frequency}</span>
+                        </div>
+                        <div class="error-meta-item">
+                            <i class="fas fa-exclamation"></i>
+                            <span>Priority: ${error.repairPriority}</span>
+                        </div>
+                        ${error.common ? `
+                        <div class="error-meta-item" style="background: rgba(245, 158, 11, 0.2); color: var(--warning-color);">
+                            <i class="fas fa-star"></i>
+                            <span>Common</span>
+                        </div>
+                        ` : ''}
+                    </div>
+                `;
+                
+                container.appendChild(errorCard);
+            });
+        }
+        
+        // Restituisce il nome completo della categoria
+        function getCategoryName(categoryCode) {
+            switch(categoryCode) {
+                case 'P': return 'Powertrain';
+                case 'C': return 'Chassis';
+                case 'B': return 'Body';
+                case 'U': return 'Network';
+                default: return 'Unknown';
+            }
+        }
+        
+        // Setup filtro categorie
+        function setupCategoryFilter() {
+            const categoryButtons = document.querySelectorAll('.category-btn');
+            
+            categoryButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    // Rimuovi classe active da tutti i bottoni
+                    categoryButtons.forEach(btn => btn.classList.remove('active'));
+                    
+                    // Aggiungi classe active al bottone cliccato
+                    this.classList.add('active');
+                    
+                    // Applica il filtro
+                    applyFilters();
+                });
+            });
+        }
+        
+        // Setup ricerca
+        function setupSearch() {
+            const searchInput = document.getElementById('searchInput');
+            let searchTimeout;
+            
+            searchInput.addEventListener('input', function() {
+                clearTimeout(searchTimeout);
+                
+                searchTimeout = setTimeout(() => {
+                    applyFilters();
+                }, 300);
+            });
+            
+            // Bottone clear search
+            document.getElementById('clearSearch').addEventListener('click', function() {
+                searchInput.value = '';
+                categoryButtons = document.querySelectorAll('.category-btn');
+                categoryButtons.forEach(btn => {
+                    if (btn.dataset.category === 'all') {
+                        btn.classList.add('active');
+                    } else {
+                        btn.classList.remove('active');
+                    }
+                });
+                applyFilters();
+            });
+        }
+        
+        // Applica tutti i filtri
+        function applyFilters() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const activeCategory = document.querySelector('.category-btn.active').dataset.category;
+            
+            let filteredCodes = errorCodesDatabase;
+            
+            // Filtro per categoria
+            if (activeCategory !== 'all') {
+                if (activeCategory === 'critical') {
+                    filteredCodes = filteredCodes.filter(code => code.severity === 'critical');
+                } else if (activeCategory === 'common') {
+                    filteredCodes = filteredCodes.filter(code => code.common === true);
+                } else {
+                    filteredCodes = filteredCodes.filter(code => code.category === activeCategory);
+                }
+            }
+            
+            // Filtro per ricerca
+            if (searchTerm) {
+                filteredCodes = filteredCodes.filter(code => 
+                    code.code.toLowerCase().includes(searchTerm) ||
+                    code.description.toLowerCase().includes(searchTerm) ||
+                    code.causes.some(cause => cause.toLowerCase().includes(searchTerm))
+                );
+            }
+            
+            // Carica i codici filtrati
+            loadErrorCodes(filteredCodes);
+            updateShowingCount(filteredCodes.length);
+        }
+        
+        // Aggiorna il contatore dei codici mostrati
+        function updateShowingCount(count) {
+            document.getElementById('showingCount').textContent = count;
+        }
+        
+        // Setup bottoni
+        function setupButtons() {
+            // Bottone print guide
+            document.getElementById('printGuide').addEventListener('click', function() {
+                window.print();
+            });
+        }
+        
+        // Setup codice formato interattivo
+        function setupCodeFormat() {
+            const codeChars = [
+                { id: 'codeChar1', options: ['P', 'C', 'B', 'U'], labels: ['Powertrain', 'Chassis', 'Body', 'Network'] },
+                { id: 'codeChar2', options: ['0', '1', '2', '3'], labels: ['SAE Standard', 'Manufacturer', 'SAE Standard', 'Reserved'] },
+                { id: 'codeChar3', options: ['0', '1', '2', '3'], labels: ['Fuel/Air', 'Fuel/Air', 'Ignition', 'Auxiliary'] },
+                { id: 'codeChar4', options: ['0', '1', '2', '3'], labels: ['System', 'System', 'Subsystem', 'Subsystem'] },
+                { id: 'codeChar5', options: ['0', '1', '2', '3'], labels: ['Specific', 'Specific', 'Specific', 'Specific'] }
+            ];
+            
+            // Rotazione automatica dei caratteri del codice
+            let currentIndexes = [0, 0, 0, 0, 0];
+            
+            function rotateCode() {
+                codeChars.forEach((char, index) => {
+                    const element = document.getElementById(char.id);
+                    currentIndexes[index] = (currentIndexes[index] + 1) % char.options.length;
+                    element.textContent = char.options[currentIndexes[index]];
+                    
+                    // Aggiorna il colore in base al carattere
+                    if (index === 0) {
+                        const colors = {
+                            'P': 'var(--danger-color)',
+                            'C': 'var(--warning-color)',
+                            'B': 'var(--success-color)',
+                            'U': 'var(--accent-color)'
+                        };
+                        element.style.color = colors[char.options[currentIndexes[index]]] || 'var(--light-text)';
+                    }
+                });
+                
+                // Aggiorna la spiegazione
+                const codeExample = `${codeChars[0].options[currentIndexes[0]]}${codeChars[1].options[currentIndexes[1]]}${codeChars[2].options[currentIndexes[2]]}${codeChars[3].options[currentIndexes[3]]}${codeChars[4].options[currentIndexes[4]]}`;
+                document.querySelector('.code-explanation').innerHTML = 
+                    `Example: <strong>${codeExample}</strong> - ${getExampleDescription(codeExample)}`;
+                
+                // Rotazione successiva
+                setTimeout(rotateCode, 3000);
+            }
+            
+            // Avvia la rotazione dopo un breve ritardo
+            setTimeout(rotateCode, 1000);
+            
+            // Aggiorna manualmente al click
+            codeChars.forEach((char, index) => {
+                const element = document.getElementById(char.id);
+                element.addEventListener('click', function() {
+                    currentIndexes[index] = (currentIndexes[index] + 1) % char.options.length;
+                    this.textContent = char.options[currentIndexes[index]];
+                    
+                    // Aggiorna la spiegazione
+                    const codeExample = `${codeChars[0].options[currentIndexes[0]]}${codeChars[1].options[currentIndexes[1]]}${codeChars[2].options[currentIndexes[2]]}${codeChars[3].options[currentIndexes[3]]}${codeChars[4].options[currentIndexes[4]]}`;
+                    document.querySelector('.code-explanation').innerHTML = 
+                        `Example: <strong>${codeExample}</strong> - ${getExampleDescription(codeExample)}`;
+                });
+            });
+        }
+        
+        // Restituisce una descrizione di esempio per il codice
+        function getExampleDescription(code) {
+            const examples = {
+                'P0300': 'Random/Multiple Cylinder Misfire Detected',
+                'C1234': 'ABS Wheel Speed Sensor Circuit Fault',
+                'B1000': 'ECU Malfunction',
+                'U0100': 'Lost Communication with ECM',
+                'P0420': 'Catalyst System Efficiency Below Threshold',
+                'P0171': 'System Too Lean (Bank 1)',
+                'P0442': 'EVAP System Small Leak',
+                'P0128': 'Coolant Thermostat Temperature Low',
+                'P0700': 'Transmission Control System Malfunction',
+                'P0455': 'EVAP System Large Leak'
+            };
+            
+            return examples[code] || 'Generic fault code example';
+        }
+        
+        // Ricerca codici aggiuntivi in background (per simulare database completo)
+        document.getElementById('searchInput').addEventListener('focus', function() {
+            // Simula caricamento di più codici
+            const totalCount = 127;
+            const currentCount = errorCodesDatabase.length;
+            
+            if (currentCount < totalCount) {
+                setTimeout(() => {
+                    document.getElementById('totalCodes').textContent = totalCount;
+                    document.getElementById('totalErrors').textContent = totalCount;
+                }, 500);
+            }
+        });
+    </script>
+</body>
+</html>

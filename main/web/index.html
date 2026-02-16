@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta author="Leonardo Magaraggia" content="Professional automotive diagnostic system for real-time vehicle monitoring and analysis.">
+    <title>OBD-II Monitor | Vehicle Dashboard</title>
+    <link rel="stylesheet" href="fonts/font-awesome/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    
+    <style>
+        @font-face {
+            font-family: 'Inter';
+            src: url('fonts/Inter-Regular.woff2') format('woff2');
+            font-weight: 400;
+            font-style: normal;
+        }
+        @font-face {
+            font-family: 'Inter';
+            src: url('fonts/Inter-Bold.woff2') format('woff2');
+            font-weight: 700;
+            font-style: normal;
+        }
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+        #rpm-overlay, #rpm-illumination, #battery-fill, .load-bar {
+            transition: width 0.2s ease-out; /* Deve essere uguale o leggermente superiore al POLL_MS */
+            will-change: width;
+        }
+
+        #rpm-cursor, #battery-indicator {
+            transition: left 0.2s ease-out;
+            will-change: left;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="main-nav">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <i class="fas fa-microchip"></i> 
+                <h1>OBD-II Monitor</h1>
+                <div class="nav-tagline">Car Dashboard</div>
+            </div>
+            <div class="nav-links">
+                <a href="index.html" class="nav-link active">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                </a>
+                <a href="graph.html" class="nav-link">
+                    <i class="fas fa-chart-line"></i> Graphs
+                </a>
+                <a href="errors.html" class="nav-link">
+                    <i class="fas fa-exclamation-triangle"></i> Errors
+                </a>
+                <a href="diagnostics.html" class="nav-link">
+                    <i class="fas fa-stethoscope"></i> Diagnostics
+                </a>
+                <button class="btn-export" id="export-csv-btn">
+                    <i class="fas fa-file-csv"></i> Export Data
+                </button>
+            </div>
+            <div class="nav-mobile-toggle">
+                <i class="fas fa-bars"></i>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Header with connection status -->
+        <header class="dashboard-header">
+            <div class="header-left">
+                <div class="vehicle-status">
+                    <div class="status-indicator connected" id="connection-status"></div>
+                    <div class="status-info">
+                        <span class="status-text" id="connection-text">Connected to vehicle</span>
+                        <div class="vehicle-details">
+                            <span><i class="fas fa-microchip"></i> ESP32-OBD v2.1</span>
+                            <span><i class="fas fa-sync-alt"></i> <span id="update-rate">50ms</span> update</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="system-info">
+                    <div class="info-item">
+                        <i class="fas fa-clock"></i>
+                        <span id="current-time">--:--:--</span>
+                    </div>
+                    <div class="info-item">
+                        <i class="fas fa-database"></i>
+                        <span id="data-count">0</span> readings
+                    </div>
+                    <div class="info-item">
+                        <i class="fas fa-wifi"></i>
+                        <span id="signal-strength">Excellent</span>
+                    </div>
+                    <div class="info-item">
+                        <i class="fas fa-memory"></i>
+                        <span id="buffer-usage">0%</span> buffer
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Key Performance Indicators -->
+       <section class="kpi-section">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <i class="fas fa-star"></i> Key Performance Indicators
+                </h2>
+                <div class="section-controls">
+                    
+                    <div class="refresh-rate">
+                        <i class="fas fa-bolt"></i>
+                        <span>Real-time monitoring</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="kpi-grid">
+                <div class="kpi-card gauge-card">
+                    <div class="kpi-header">
+                        <i class="fas fa-tachometer-alt"></i>
+                        <h3>Engine RPM</h3>
+                        <button class="btn-small" id="rpm-toggle-btn" style="margin-right: 0px;background-color: transparent;">
+                        <i class="fas fa-exchange-alt"></i> Scale 5k/8k
+                        </button>
+                        <div class="kpi-subtitle" id="rpm-subtitle">0-5000 RPM</div>
+                    </div>
+                    <div class="rpm-progress-container">
+                        <div class="rpm-track">
+                            <div class="rpm-gradient-background"></div>
+                            <div class="rpm-overlay" id="rpm-overlay"></div>
+                            <div class="rpm-illumination" id="rpm-illumination"></div>
+                            <div class="rpm-cursor" id="rpm-cursor">
+                                <div class="cursor-dot-bottom"></div>
+                            </div>
+                            <div class="zone-marker" style="left: 37.5%"></div>
+                            <div class="zone-marker" style="left: 62.5%"></div>
+                            <div class="zone-marker" style="left: 87.5%"></div>
+                        </div>
+                        <div class="rpm-scale" id="rpm-scale-container">
+                            <span>0</span>
+                            <span>1.2</span>
+                            <span>2.5</span>
+                            <span>3.7</span>
+                            <span>5</span>
+                        </div>
+                    </div>
+                     <div class="gauge-readout">
+                        <div class="gauge-value" id="kpi-rpm">2500</div>
+                        <div class="gauge-unit">RPM</div>
+                        <div class="gauge-trend" id="rpm-trend">
+                            <i class="fas fa-arrow-up"></i> +2%
+                        </div>
+                    </div>
+                    </div>
+
+                <div class="kpi-card gauge-card">
+                    <div class="kpi-header">
+                        <i class="fas fa-tachometer-alt-fast"></i> 
+                        <h3>Speed</h3>
+                        <div class="kpi-subtitle">0-240 km/h</div>
+                    </div>
+                    <div class="speed-progress-container">
+                        <div class="speed-track">
+                            <div class="speed-gradient-background"></div>
+                            <div class="speed-overlay" id="speed-overlay"></div>
+                            <div class="speed-illumination" id="speed-illumination"></div>
+                            <div class="speed-cursor" id="speed-cursor">
+                                <div class="cursor-dot-bottom"></div>
+                            </div>
+                            <!-- Zone markers -->
+                            <div class="zone-marker" style="left: 25%"></div>
+                            <div class="zone-marker" style="left: 50%"></div>
+                            <div class="zone-marker" style="left: 75%"></div>
+                        </div>
+                        <div class="speed-scale">
+                            <span>0</span>
+                            <span>60</span>
+                            <span>120</span>
+                            <span>180</span>
+                            <span>240</span>
+                            <span class="unit-label">km/h</span>
+                        </div>
+                    </div>
+                    <div class="gauge-readout">
+                        <div class="gauge-value" id="kpi-speed">80</div>
+                        <div class="gauge-unit">km/h</div>
+                        <div class="gauge-trend" id="speed-trend">
+                            <i class="fas fa-equals"></i> Stable
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Temperature Linear Gauge -->
+                <div class="kpi-card gauge-card">
+                    <div class="kpi-header">
+                        <i class="fas fa-thermometer-half"></i>
+                        <h3>Temperature</h3>
+                        <div class="kpi-subtitle">50°C - 130°C</div>
+                    </div>
+                    <div class="temp-gauge-container">
+                        <div class="temp-track">
+                            <div class="temp-gradient"></div>
+                            <div class="temp-indicator" id="temp-indicator"></div>
+                            <div class="optimal-marker" style="left: 50%; transform: translateX(-50%);">
+                                <div class="optimal-line"></div>
+                                <div class="optimal-label">90° Optimal</div>
+                            </div>
+                        </div>
+                        <div class="temp-scale">
+                            <span>50°</span>
+                            <span>70°</span>
+                            <span>90°</span>
+                            <span>110°</span>
+                            <span>130°</span>
+                        </div>
+                    </div>
+                    <div class="gauge-readout">
+                        <div class="gauge-value" id="kpi-temp-coolant">90</div>
+                        <div class="gauge-unit">°C Coolant</div>
+                        <div class="kpi-subvalue">
+                            <i class="fas fa-wind"></i> Intake: <span id="kpi-temp-intake">35</span>°C
+                        </div>
+                    </div>
+                </div>
+
+                <div class="kpi-card gauge-card">
+                    <div class="kpi-header">
+                        <i class="fas fa-battery-full"></i>
+                        <h3>Electrical System</h3>
+                        <div class="kpi-subtitle">11V - 17V</div>
+                    </div>
+                    <div class="battery-progress-container">
+                        <div class="battery-track">
+                            <div class="battery-fill" id="battery-fill" style="background: #10B981; background-image: none;"></div>
+                            <div class="battery-indicator" id="battery-indicator"></div>
+                            <div class="optimal-marker" style="left: 16.6%; transform: translateX(-50%);">
+                                <div class="optimal-line"></div>
+                                <div class="optimal-label">12V Ref</div>
+                            </div>
+                        </div>
+                        <div class="battery-scale">
+                            <span>11V</span>
+                            <span>12.5V</span>
+                            <span>14V</span>
+                            <span>15.5V</span>
+                            <span>17V</span>
+                        </div>
+                    </div>
+                    <div class="gauge-readout">
+                        <div class="gauge-value" id="kpi-batt">13.80</div>
+                        <div class="gauge-unit">Volts</div>
+                        <div class="kpi-health" id="battery-health">
+                            <i class="fas fa-check-circle"></i> Healthy
+                        </div>
+                    </div>
+                    </div>
+            </div>
+        </section>
+
+        <!-- Detailed Panels -->
+        <div class="detailed-panels">
+            <!-- Engine Panel -->
+            <section class="panel engine-panel">
+                <div class="panel-header">
+                    <div class="panel-title">
+                        <h3><i class="fas fa-cogs"></i> Engine Parameters</h3>
+                        <div class="panel-subtitle">Real-time combustion analysis</div>
+                    </div>
+                    <div class="panel-actions">
+                        <button class="btn-small" id="engine-log-btn">
+                            <i class="fas fa-history"></i> Log History
+                        </button>
+                    </div>
+                </div>
+                <div class="panel-grid">
+                    <div class="param-item">
+                        <div class="param-header">
+                            <div class="param-name">
+                                <i class="fas fa-weight"></i>
+                                Engine Load
+                            </div>
+                            <div class="param-id">PID 0x04</div>
+                        </div>
+                        <div class="param-value" id="param-load">45.5%</div>
+                        <div class="param-bar">
+                            <div class="bar-fill" id="load-bar"></div>
+                            <div class="bar-markers">
+                                <span class="marker" style="left: 25%">25%</span>
+                                <span class="marker" style="left: 50%">50%</span>
+                                <span class="marker" style="left: 75%">75%</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="param-item">
+                        <div class="param-header">
+                            <div class="param-name">
+                                <i class="fas fa-gas-pump"></i>
+                                Throttle Position
+                            </div>
+                            <div class="param-id">PID 0x11</div>
+                        </div>
+                        <div class="param-value" id="param-throttle">15.2%</div>
+                        <div class="param-bar">
+                            <div class="bar-fill" id="throttle-bar"></div>
+                            <div class="bar-markers">
+                                <span class="marker" style="left: 25%">25%</span>
+                                <span class="marker" style="left: 50%">50%</span>
+                                <span class="marker" style="left: 75%">75%</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="param-item">
+                        <div class="param-header">
+                            <div class="param-name">
+                                <i class="fas fa-cog"></i>
+                                Ignition Timing
+                            </div>
+                            <div class="param-id">PID 0x0E</div>
+                        </div>
+                        <div class="param-value" id="param-timing">10.0°</div>
+                        <div class="param-status">
+                            <span class="status-dot optimal"></span>
+                            <span class="status-text">Optimal advance</span>
+                        </div>
+                    </div>
+                    
+                    <div class="param-item">
+                        <div class="param-header">
+                            <div class="param-name">
+                                <i class="fas fa-wind"></i>
+                                Air Flow (MAF)
+                            </div>
+                            <div class="param-id">PID 0x10</div>
+                        </div>
+                        <div class="param-value" id="param-maf">12.50 g/s</div>
+                        <div class="param-trend up">
+                            <i class="fas fa-arrow-up"></i> +0.5 g/s
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Fuel System Panel -->
+            <section class="panel fuel-panel">
+                <div class="panel-header">
+                    <div class="panel-title">
+                        <h3><i class="fas fa-gas-pump"></i> Fuel System</h3>
+                        <div class="panel-subtitle">Combustion efficiency monitoring</div>
+                    </div>
+                    <div class="fuel-level">
+                        <div class="fuel-gauge">
+                            <div class="fuel-tank">
+                                <div class="level-fill" id="fuel-level-fill"></div>
+                            </div>
+                            <span id="fuel-level-value">65%</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="panel-grid">
+                    <div class="param-item">
+                        <div class="param-header">
+                            <div class="param-name">
+                                <i class="fas fa-tachometer-alt"></i>
+                                Fuel Level
+                            </div>
+                            <div class="param-id">PID 0x2F</div>
+                        </div>
+                        <div class="param-value" id="param-fuel-lvl">65.0%</div>
+                        <div class="param-estimate">
+                            <i class="fas fa-road"></i> ~<span id="fuel-range">450</span> km remaining
+                        </div>
+                    </div>
+                    
+                    <div class="param-item">
+                        <div class="param-header">
+                            <div class="param-name">
+                                <i class="fas fa-compress-arrows-alt"></i>
+                                Fuel Pressure
+                            </div>
+                            <div class="param-id">PID 0x0A</div>
+                        </div>
+                        <div class="param-value" id="param-fuel-press">350.0 kPa</div>
+                        <div class="param-status">
+                            <span class="status-dot good"></span>
+                            <span class="status-text">Within specifications</span>
+                        </div>
+                    </div>
+                    
+                    <div class="param-item">
+                        <div class="param-header">
+                            <div class="param-name">
+                                <i class="fas fa-adjust"></i>
+                                Short Fuel Trim
+                            </div>
+                            <div class="param-id">PID 0x06</div>
+                        </div>
+                        <div class="param-value" id="param-fuel-trim-s">+2.5%</div>
+                        <div class="param-trend neutral">
+                            <i class="fas fa-equals"></i> ±0.0%
+                        </div>
+                    </div>
+                    
+                    <div class="param-item">
+                        <div class="param-header">
+                            <div class="param-name">
+                                <i class="fas fa-balance-scale"></i>
+                                Long Fuel Trim
+                            </div>
+                            <div class="param-id">PID 0x07</div>
+                        </div>
+                        <div class="param-value" id="param-fuel-trim-l">+1.0%</div>
+                        <div class="param-trend down">
+                            <i class="fas fa-arrow-down"></i> -0.2%
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Environment Panel -->
+            <section class="panel environment-panel">
+                <div class="panel-header">
+                    <div class="panel-title">
+                        <h3><i class="fas fa-mountain"></i> Environment Conditions</h3>
+                        <div class="panel-subtitle">Ambient & intake measurements</div>
+                    </div>
+                    <div class="weather-indicator">
+                        <div class="weather-icon">
+                            <i class="fas fa-sun"></i>
+                        </div>
+                        <div class="weather-info">
+                            <span id="ambient-temp">25°C</span>
+                            <small>Ambient</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="panel-grid">
+                    <div class="param-item">
+                        <div class="param-header">
+                            <div class="param-name">
+                                <i class="fas fa-temperature-low"></i>
+                                Intake Temperature
+                            </div>
+                            <div class="param-id">PID 0x0F</div>
+                        </div>
+                        <div class="param-value" id="param-temp-intake">35°C</div>
+                        <div class="param-diff">
+                            Δ <span id="temp-diff">10</span>°C vs ambient
+                        </div>
+                    </div>
+                    
+                    <div class="param-item">
+                        <div class="param-header">
+                            <div class="param-name">
+                                <i class="fas fa-compress-alt"></i>
+                                Manifold Pressure
+                            </div>
+                            <div class="param-id">PID 0x0B</div>
+                        </div>
+                        <div class="param-value" id="param-press-intake">101 kPa</div>
+                        <div class="param-bar">
+                            <div class="bar-fill" id="press-intake-bar"></div>
+                            <div class="bar-markers">
+                                <span class="marker" style="left: 33%">50 kPa</span>
+                                <span class="marker" style="left: 66%">100 kPa</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="param-item">
+                        <div class="param-header">
+                            <div class="param-name">
+                                <i class="fas fa-cloud"></i>
+                                Barometric Pressure
+                            </div>
+                            <div class="param-id">PID 0x33</div>
+                        </div>
+                        <div class="param-value" id="param-press-baro">100.0 kPa</div>
+                        <div class="param-status">
+                            <span class="status-dot optimal"></span>
+                            <span class="status-text">Stable atmospheric</span>
+                        </div>
+                    </div>
+                    
+                    <div class="param-item">
+                        <div class="param-header">
+                            <div class="param-name">
+                                <i class="fas fa-road"></i>
+                                Distance with MIL
+                            </div>
+                            <div class="param-id">PID 0x21</div>
+                        </div>
+                        <div class="param-value" id="param-dist-mil">0 km</div>
+                        <div class="param-status">
+                            <i class="fas fa-check-circle"></i> No active errors
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- System Status Panel -->
+            <section class="panel system-panel">
+                <div class="panel-header">
+                    <div class="panel-title">
+                        <h3><i class="fas fa-heartbeat"></i> System Status</h3>
+                        <div class="panel-subtitle">Diagnostic & communication health</div>
+                    </div>
+                    <div class="system-health">
+                        <span class="health-indicator excellent">
+                            <i class="fas fa-heart"></i> System Excellent
+                        </span>
+                    </div>
+                </div>
+                <div class="system-status">
+                    <div class="status-item">
+                        <div class="status-icon">
+                            <div class="icon-container">
+                                <i class="fas fa-microchip"></i>
+                            </div>
+                        </div>
+                        <div class="status-info">
+                            <h4>ECU Communication</h4>
+                            <p>Protocol: ISO 15765-4 • Latency: <span id="latency-value">12ms</span></p>
+                            <div class="status-meta">
+                                <span class="meta-item"><i class="fas fa-check"></i> Handshake OK</span>
+                                <span class="meta-item"><i class="fas fa-bolt"></i> <span id="update-interval">50ms</span> poll</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="status-item">
+                        <div class="status-icon">
+                            <div class="icon-container">
+                                <i class="fas fa-shield-alt"></i>
+                            </div>
+                        </div>
+                        <div class="status-info">
+                            <h4>Diagnostic Status</h4>
+                            <p>DTC Codes: <span class="dtc-count" id="dtc-count">0</span> active • <span id="pending-dtc">0</span> pending</p>
+                            <div class="status-meta">
+                                <span class="meta-item"><i class="fas fa-check-circle"></i> No MIL</span>
+                                <span class="meta-item"><i class="fas fa-history"></i> Last scan: Now</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="status-item">
+                        <div class="status-icon">
+                            <div class="icon-container">
+                                <i class="fas fa-database"></i>
+                            </div>
+                        </div>
+                        <div class="status-info">
+                            <h4>Data Acquisition</h4>
+                            <p><span id="data-points">0</span> points • Buffer: <span id="buffer-usage-display">0%</span> • Rate: <span id="data-rate">0</span>/s</p>
+                            <div class="status-meta">
+                                <span class="meta-item"><i class="fas fa-sd-card"></i> <span id="log-count">0</span> logs</span>
+                                <span class="meta-item"><i class="fas fa-hdd"></i> <span id="storage-free">85%</span> free</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="status-item">
+                        <div class="status-icon">
+                            <div class="icon-container">
+                                <i class="fas fa-network-wired"></i>
+                            </div>
+                        </div>
+                        <div class="status-info">
+                            <h4>Network Performance</h4>
+                            <p>ESP32-OBD • Signal: <span id="signal-strength-display">Excellent</span> • Quality: <span id="signal-quality">100%</span></p>
+                            <div class="status-meta">
+                                <span class="meta-item"><i class="fas fa-rss"></i> Ping: <span id="ping-time">12ms</span></span>
+                                <span class="meta-item"><i class="fas fa-sync-alt"></i> Uptime: <span id="uptime">00:00:00</span></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Quick Actions -->
+        <section class="quick-actions">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <i class="fas fa-bolt"></i> Quick Actions
+                </h2>
+                <div class="section-subtitle">One-click diagnostic operations</div>
+            </div>
+            <div class="actions-grid">
+                <button class="action-btn" id="quick-snapshot">
+                    <div class="action-icon">
+                        <i class="fas fa-camera"></i>
+                    </div>
+                    <div class="action-content">
+                        <span class="action-title">Snapshot</span>
+                        <small class="action-desc">Capture current system state</small>
+                    </div>
+                    <div class="action-badge">
+                        <i class="fas fa-arrow-right"></i>
+                    </div>
+                </button>
+                
+                <button class="action-btn" id="quick-diagnostic">
+                    <div class="action-icon">
+                        <i class="fas fa-stethoscope"></i>
+                    </div>
+                    <div class="action-content">
+                        <span class="action-title">Full Diagnostic</span>
+                        <small class="action-desc">Complete system scan</small>
+                    </div>
+                    <div class="action-badge">
+                        <i class="fas fa-arrow-right"></i>
+                    </div>
+                </button>
+                
+                <button class="action-btn" id="quick-chart">
+                    <div class="action-icon">
+                        <i class="fas fa-chart-bar"></i>
+                    </div>
+                    <div class="action-content">
+                        <span class="action-title">Live Charts</span>
+                        <small class="action-desc">Real-time graphing</small>
+                    </div>
+                    <div class="action-badge">
+                        <i class="fas fa-arrow-right"></i>
+                    </div>
+                </button>
+                
+                <button class="action-btn" id="quick-alerts">
+                    <div class="action-icon">
+                        <i class="fas fa-bell"></i>
+                    </div>
+                    <div class="action-content">
+                        <span class="action-title">Alert Settings</span>
+                        <small class="action-desc">Configure thresholds</small>
+                    </div>
+                    <div class="action-badge">
+                        <span class="badge-count">3</span>
+                    </div>
+                </button>
+                
+                <button class="action-btn" id="quick-calibration">
+                    <div class="action-icon">
+                        <i class="fas fa-sliders-h"></i>
+                    </div>
+                    <div class="action-content">
+                        <span class="action-title">Calibration</span>
+                        <small class="action-desc">Sensor calibration tools</small>
+                    </div>
+                    <div class="action-badge">
+                        <i class="fas fa-arrow-right"></i>
+                    </div>
+                </button>
+                
+                <button class="action-btn" id="quick-reports">
+                    <div class="action-icon">
+                        <i class="fas fa-file-alt"></i>
+                    </div>
+                    <div class="action-content">
+                        <span class="action-title">Reports</span>
+                        <small class="action-desc">Generate diagnostics report</small>
+                    </div>
+                    <div class="action-badge">
+                        <i class="fas fa-arrow-right"></i>
+                    </div>
+                </button>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="dashboard-footer">
+            <div class="footer-content">
+                <div class="footer-left">
+                    <div class="connection-stats">
+                        <span class="stat-item">
+                            <i class="fas fa-wifi"></i>
+                            <span class="stat-label">ESP32-OBD</span>
+                            <span class="stat-value" id="ping-time-display">12ms</span>
+                        </span>
+                        <span class="stat-item">
+                            <i class="fas fa-sync-alt"></i>
+                            <span class="stat-label">Update</span>
+                            <span class="stat-value" id="update-interval-display">50ms</span>
+                        </span>
+                        <span class="stat-item">
+                            <i class="fas fa-microchip"></i>
+                            <span class="stat-label">ECU Protocol</span>
+                            <span class="stat-value">ISO 15765-4</span>
+                        </span>
+                    </div>
+                </div>
+                <div class="footer-center">
+                    <div class="performance-stats">
+                        <span class="stat-item">
+                            <i class="fas fa-tachometer-alt"></i>
+                            <span class="stat-label">Performance</span>
+                            <span class="stat-value" id="performance-score">98%</span>
+                        </span>
+                        <span class="stat-item">
+                            <i class="fas fa-database"></i>
+                            <span class="stat-label">Data Rate</span>
+                            <span class="stat-value" id="data-rate-display">20/s</span>
+                        </span>
+                    </div>
+                </div>
+                <div class="footer-right">
+                    <div class="data-stats">
+                        <span class="stat-item">
+                            <i class="fas fa-clock"></i>
+                            <span class="stat-label">Uptime</span>
+                            <span class="stat-value" id="uptime-display">00:00:00</span>
+                        </span>
+                        <span class="stat-item">
+                            <i class="fas fa-database"></i>
+                            <span class="stat-label">Total Data</span>
+                            <span class="stat-value" id="total-data">0</span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-copyright">
+                <p>OBD-II Professional Monitoring System - Engineering Department of the University of Trento
+            </div>
+        </footer>
+    </div>
+
+    <!-- Export Modal -->
+    <div class="modal-overlay" id="export-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-file-export"></i> Export Diagnostic Data</h3>
+                <button class="modal-close" id="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="export-options">
+                    <div class="export-option">
+                        <input type="radio" name="export-type" id="export-csv" checked>
+                        <label for="export-csv">
+                            <i class="fas fa-file-csv"></i>
+                            <div class="option-content">
+                                <strong>CSV Formatted</strong>
+                                <small>Compatible with Excel, MATLAB, LabVIEW</small>
+                            </div>
+                        </label>
+                    </div>
+                    <div class="export-option">
+                        <input type="radio" name="export-type" id="export-json">
+                        <label for="export-json">
+                            <i class="fas fa-file-code"></i>
+                            <div class="option-content">
+                                <strong>JSON Raw Data</strong>
+                                <small>Complete dataset for analysis</small>
+                            </div>
+                        </label>
+                    </div>
+                    <div class="export-option">
+                        <input type="radio" name="export-type" id="export-pdf">
+                        <label for="export-pdf">
+                            <i class="fas fa-file-pdf"></i>
+                            <div class="option-content">
+                                <strong>PDF Report</strong>
+                                <small>Printable diagnostic report</small>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+                <div class="export-range">
+                    <h4>Data Range Selection</h4>
+                    <div class="range-options">
+                        <button class="range-btn active" data-minutes="5">Last 5 min</button>
+                        <button class="range-btn" data-minutes="15">Last 15 min</button>
+                        <button class="range-btn" data-minutes="30">Last 30 min</button>
+                        <button class="range-btn" data-minutes="60">Last hour</button>
+                        <button class="range-btn" data-minutes="0">All data</button>
+                    </div>
+                </div>
+                <div class="export-preview">
+                    <div class="preview-header">
+                        <h4>Data Preview</h4>
+                        <div class="preview-info">
+                            <span id="preview-count">0</span> data points selected
+                        </div>
+                    </div>
+                    <div class="preview-content" id="csv-preview">
+                        <!-- CSV preview will be generated here -->
+                        <div class="preview-placeholder">
+                            <i class="fas fa-database"></i>
+                            <p>Select data range to preview</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" id="modal-cancel">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                <button class="btn-primary" id="modal-export">
+                    <i class="fas fa-download"></i> Download Selected Data
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="script.js"></script>
+    <script src="js/animations.js"></script>
+</body>
+</html>

@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Charts | OBD-II Monitor</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        @font-face {
+            font-family: 'Inter';
+            src: url('fonts/Inter-Regular.woff2') format('woff2');
+            font-weight: 400;
+            font-style: normal;
+        }
+        @font-face {
+            font-family: 'Inter';
+            src: url('fonts/Inter-Bold.woff2') format('woff2');
+            font-weight: 700;
+            font-style: normal;
+        }
+        .nav-export {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+            margin-left: 10px;
+        }
+
+        .nav-export:hover {
+            background: var(--primary-hover);
+        }
+    </style>
+    <link rel="stylesheet" href="fonts/font-awesome/css/all.min.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="main-nav">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <i class="fas fa-chart-line"></i>
+                <h1>Real-Time Charts</h1>
+            </div>
+            <div class="nav-links">
+                <a href="index.html" class="nav-link">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                </a>
+                <a href="graph.html" class="nav-link active">
+                    <i class="fas fa-chart-line"></i> Charts
+                </a>
+                <a href="errors.html" class="nav-link">
+                    <i class="fas fa-exclamation-triangle"></i> Errors
+                </a>
+                <button class="btn-export nav-export" id="export-chart-btn">
+                    <i class="fas fa-image"></i> Export Chart
+                </button>
+            </div>
+            <div class="nav-mobile-toggle">
+                <i class="fas fa-bars"></i>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Chart Controls -->
+        <div class="chart-controls">
+            <div class="control-group">
+                <label for="chart-interval">Time Interval:</label>
+                <select id="chart-interval">
+                    <option value="30">Last 30 seconds</option>
+                    <option value="60" selected>Last minute</option>
+                    <option value="300">Last 5 minutes</option>
+                    <option value="600">Last 10 minutes</option>
+                </select>
+            </div>
+            
+            <div class="control-group chart-export-group">
+                <label for="export-chart-select">Chart to export:</label>
+                <select id="export-chart-select">
+                    <option value="rpm-speed">RPM & Speed</option>
+                    <option value="temperature">Temperatures</option>
+                    <option value="pressure">Pressures</option>
+                    <option value="fuel">Fuel System</option>
+                    <option value="electrical">Electrical System</option>
+                    <option value="performance">Performance</option>
+                    <option value="all">All Charts</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Main Charts -->
+        <div class="charts-grid">
+            <!-- RPM & Speed Chart -->
+            <div class="chart-card full-width">
+                <div class="chart-header">
+                    <h3><i class="fas fa-tachometer-alt"></i> RPM & Speed</h3>
+                    <div class="chart-stats">
+                        <span>RPM Max: <span id="rpm-max">0</span></span>
+                        <span>Speed Max: <span id="speed-max">0</span> km/h</span>
+                        <span>Average: <span id="rpm-avg">0</span> RPM</span>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="rpm-speed-chart"></canvas>
+                </div>
+            </div>
+
+            <!-- Temperature Chart -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h3><i class="fas fa-thermometer-half"></i> Temperatures</h3>
+                    <div class="chart-legend">
+                        <span class="legend-item coolant"><i class="fas fa-circle"></i> Coolant (°C)</span>
+                        <span class="legend-item intake"><i class="fas fa-circle"></i> Intake (°C)</span>
+                        <span class="legend-item ambient"><i class="fas fa-circle"></i> Ambient (°C)</span>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="temperature-chart"></canvas>
+                </div>
+            </div>
+
+            <!-- Pressure Chart -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h3><i class="fas fa-compress-alt"></i> Pressures</h3>
+                    <div class="chart-legend">
+                        <span class="legend-item intake"><i class="fas fa-circle"></i> Manifold (kPa)</span>
+                        <span class="legend-item baro"><i class="fas fa-circle"></i> Barometric (kPa)</span>
+                        <span class="legend-item fuel"><i class="fas fa-circle"></i> Fuel Rail (bar)</span>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="pressure-chart"></canvas>
+                </div>
+            </div>
+
+            <!-- Fuel Chart -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h3><i class="fas fa-gas-pump"></i> Fuel System</h3>
+                    <div class="chart-legend">
+                        <span class="legend-item level"><i class="fas fa-circle"></i> Level (%)</span>
+                        <span class="legend-item trim-s"><i class="fas fa-circle"></i> Short Term Trim (%)</span>
+                        <span class="legend-item trim-l"><i class="fas fa-circle"></i> Long Term Trim (%)</span>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="fuel-chart"></canvas>
+                </div>
+            </div>
+
+            <!-- Electrical Chart -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h3><i class="fas fa-bolt"></i> Electrical System</h3>
+                    <div class="chart-stats">
+                        <span>Batt Min: <span id="batt-min">0</span> V</span>
+                        <span>Batt Max: <span id="batt-max">0</span> V</span>
+                        <span>Average: <span id="batt-avg">0</span> V</span>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="electrical-chart"></canvas>
+                </div>
+            </div>
+
+            <!-- Performance Chart -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h3><i class="fas fa-chart-line"></i> Performance</h3>
+                    <div class="chart-legend">
+                        <span class="legend-item load"><i class="fas fa-circle"></i> Engine Load (%)</span>
+                        <span class="legend-item throttle"><i class="fas fa-circle"></i> Throttle (%)</span>
+                        <span class="legend-item maf"><i class="fas fa-circle"></i> MAF (g/s)</span>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="performance-chart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Advanced Statistics -->
+        <div class="advanced-stats">
+            <div class="stats-card">
+                <h3><i class="fas fa-calculator"></i> RPM Statistics</h3>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-label">Minimum</div>
+                        <div class="stat-value" id="rpm-min">0</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Maximum</div>
+                        <div class="stat-value" id="rpm-max2">0</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Average</div>
+                        <div class="stat-value" id="rpm-avg2">0</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Std. Dev.</div>
+                        <div class="stat-value" id="rpm-std">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stats-card">
+                <h3><i class="fas fa-chart-area"></i> Trend Analysis</h3>
+                <div class="trend-analysis">
+                    <div class="trend-item">
+                        <span class="trend-label">Fuel Consumption:</span>
+                        <span class="trend-value" id="fuel-trend">-- L/100km</span>
+                    </div>
+                    <div class="trend-item">
+                        <span class="trend-label">Engine Efficiency:</span>
+                        <span class="trend-value" id="efficiency-trend">-- %</span>
+                    </div>
+                    <div class="trend-item">
+                        <span class="trend-label">Temperature Variation:</span>
+                        <span class="trend-value" id="temp-trend">-- °C/min</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="lib/chart.js"></script>
+    <script src="lib/luxox.js"></script>
+    <script src="js/chart-script.js"></script>
+    <script src="script.js"></script>
+    <script>
+        // Script for mobile menu toggle
+        document.querySelector('.nav-mobile-toggle').addEventListener('click', function() {
+            document.querySelector('.nav-links').classList.toggle('active');
+        });
+    </script>
+</body>
+</html>

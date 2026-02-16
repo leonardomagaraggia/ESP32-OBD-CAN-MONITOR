@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OBD-II Diagnostics Center | Professional Monitoring System</title>
+    
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="fonts/font-awesome/css/all.min.css">
+    
+    <!-- Chart.js per grafici diagnostici -->
+    <script src="lib/chart.js"></script>
+    
+    <!-- Stile principale -->
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- Stili aggiuntivi per la diagnostica -->
+    <style>
+        /* Stili specifici per la pagina diagnostica */
+        .diagnostic-highlight {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.05));
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+        
+        .diagnostic-highlight:hover {
+            border-color: var(--danger-color);
+            box-shadow: var(--shadow-lg), var(--shadow-glow-danger);
+        }
+        
+        .dtc-badge {
+            font-size: 11px;
+            font-weight: 800;
+            padding: 4px 10px;
+            border-radius: var(--radius-full);
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .dtc-critical { background: rgba(239, 68, 68, 0.2); color: var(--danger-color); border: 1px solid rgba(239, 68, 68, 0.3); }
+        .dtc-high { background: rgba(245, 158, 11, 0.2); color: var(--warning-color); border: 1px solid rgba(245, 158, 11, 0.3); }
+        .dtc-medium { background: rgba(59, 130, 246, 0.2); color: var(--info-color); border: 1px solid rgba(59, 130, 246, 0.3); }
+        .dtc-low { background: rgba(100, 116, 139, 0.2); color: var(--light-text-tertiary); border: 1px solid rgba(100, 116, 139, 0.3); }
+        
+        .dtc-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: var(--space-lg);
+            margin-bottom: var(--space-xl);
+        }
+        
+        .dtc-card {
+            background: var(--dark-card);
+            border-radius: var(--radius-xl);
+            border: 1px solid var(--dark-border);
+            padding: var(--space-lg);
+            transition: var(--transition-normal);
+        }
+        
+        .dtc-card.critical {
+            border-left: 4px solid var(--danger-color);
+            background: linear-gradient(135deg, var(--dark-card), rgba(239, 68, 68, 0.05));
+        }
+        
+        .dtc-card.warning {
+            border-left: 4px solid var(--warning-color);
+            background: linear-gradient(135deg, var(--dark-card), rgba(245, 158, 11, 0.05));
+        }
+        
+        .dtc-card.info {
+            border-left: 4px solid var(--info-color);
+            background: linear-gradient(135deg, var(--dark-card), rgba(59, 130, 246, 0.05));
+        }
+        
+        .dtc-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg), var(--shadow-glow);
+        }
+        
+        .dtc-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: var(--space-md);
+        }
+        
+        .dtc-code {
+            font-size: 24px;
+            font-weight: 900;
+            font-family: 'Courier New', 'Roboto Mono', monospace;
+            color: var(--light-text);
+            letter-spacing: 1px;
+        }
+        
+        .dtc-description {
+            font-size: 14px;
+            color: var(--light-text-secondary);
+            margin: var(--space-sm) 0;
+            line-height: 1.5;
+        }
+        
+        .dtc-meta {
+            display: flex;
+            gap: var(--space-md);
+            margin-top: var(--space-md);
+            padding-top: var(--space-md);
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .dtc-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: var(--light-text-tertiary);
+        }
+        
+        .dtc-meta-item i {
+            font-size: 14px;
+        }
+        
+        .readiness-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: var(--space-lg);
+            margin-bottom: var(--space-xl);
+        }
+        
+        .readiness-card {
+            background: var(--dark-card);
+            border-radius: var(--radius-xl);
+            border: 1px solid var(--dark-border);
+            padding: var(--space-lg);
+            text-align: center;
+            transition: var(--transition-normal);
+        }
+        
+        .readiness-card.complete {
+            border-color: var(--success-color);
+            background: linear-gradient(135deg, var(--dark-card), rgba(16, 185, 129, 0.05));
+        }
+        
+        .readiness-card.incomplete {
+            border-color: var(--warning-color);
+            background: linear-gradient(135deg, var(--dark-card), rgba(245, 158, 11, 0.05));
+        }
+        
+        .readiness-card.na {
+            border-color: var(--dark-border);
+            background: linear-gradient(135deg, var(--dark-card), rgba(100, 116, 139, 0.05));
+        }
+        
+        .readiness-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .readiness-icon {
+            font-size: 32px;
+            margin-bottom: var(--space-md);
+        }
+        
+        .readiness-icon.complete { color: var(--success-color); }
+        .readiness-icon.incomplete { color: var(--warning-color); }
+        .readiness-icon.na { color: var(--light-text-tertiary); }
+        
+        .readiness-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--light-text);
+            margin-bottom: var(--space-sm);
+        }
+        
+        .readiness-status {
+            font-size: 12px;
+            font-weight: 700;
+            padding: 4px 12px;
+            border-radius: var(--radius-full);
+            display: inline-block;
+            margin-top: var(--space-sm);
+        }
+        
+        .status-complete { background: rgba(16, 185, 129, 0.2); color: var(--success-color); }
+        .status-incomplete { background: rgba(245, 158, 11, 0.2); color: var(--warning-color); }
+        .status-na { background: rgba(100, 116, 139, 0.2); color: var(--light-text-tertiary); }
+        
+        .freeze-frame-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--dark-card);
+            border-radius: var(--radius-xl);
+            overflow: hidden;
+            margin-bottom: var(--space-xl);
+            border: 1px solid var(--dark-border);
+        }
+        
+        .freeze-frame-table th,
+        .freeze-frame-table td {
+            padding: var(--space-md) var(--space-lg);
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .freeze-frame-table th {
+            background: linear-gradient(to right, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.95));
+            color: var(--light-text);
+            font-weight: 700;
+            font-size: 14px;
+        }
+        
+        .freeze-frame-table td {
+            color: var(--light-text-secondary);
+            font-size: 13px;
+        }
+        
+        .freeze-frame-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .freeze-frame-table tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+        
+        .parameter-value {
+            font-family: 'Courier New', monospace;
+            font-weight: 700;
+            color: var(--light-text);
+        }
+        
+        .chart-container {
+            background: var(--dark-card);
+            border-radius: var(--radius-xl);
+            border: 1px solid var(--dark-border);
+            padding: var(--space-lg);
+            margin-bottom: var(--space-xl);
+            height: 300px;
+            position: relative;
+        }
+        
+        .diagnostic-actions {
+            display: flex;
+            gap: var(--space-md);
+            flex-wrap: wrap;
+            margin-bottom: var(--space-xl);
+        }
+        
+        .action-full {
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        .btn-diagnostic {
+            background: linear-gradient(135deg, var(--danger-color) 0%, #dc2626 100%);
+            color: white;
+            border: none;
+            padding: var(--space-md) var(--space-xl);
+            border-radius: var(--radius-lg);
+            font-weight: 700;
+            font-size: 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: var(--space-md);
+            transition: var(--transition-normal);
+            box-shadow: var(--shadow-md);
+            justify-content: center;
+        }
+        
+        .btn-diagnostic:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg), var(--shadow-glow-danger);
+        }
+        
+        .btn-diagnostic.success {
+            background: linear-gradient(135deg, var(--success-color) 0%, var(--success-dark) 100%);
+        }
+        
+        .btn-diagnostic.success:hover {
+            box-shadow: var(--shadow-lg), var(--shadow-glow-success);
+        }
+        
+        .btn-diagnostic.info {
+            background: linear-gradient(135deg, var(--info-color) 0%, var(--info-dark) 100%);
+        }
+        
+        .btn-diagnostic.info:hover {
+            box-shadow: var(--shadow-lg), var(--shadow-glow);
+        }
+        
+        .dtc-stats {
+            display: flex;
+            gap: var(--space-xl);
+            margin-bottom: var(--space-xl);
+            flex-wrap: wrap;
+        }
+        
+        .stat-card {
+            flex: 1;
+            min-width: 200px;
+            background: var(--dark-card);
+            border-radius: var(--radius-xl);
+            border: 1px solid var(--dark-border);
+            padding: var(--space-lg);
+            display: flex;
+            align-items: center;
+            gap: var(--space-lg);
+            transition: var(--transition-normal);
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .stat-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+        
+        .stat-icon.critical { background: rgba(239, 68, 68, 0.2); color: var(--danger-color); }
+        .stat-icon.warning { background: rgba(245, 158, 11, 0.2); color: var(--warning-color); }
+        .stat-icon.total { background: rgba(37, 99, 235, 0.2); color: var(--primary-color); }
+        .stat-icon.ready { background: rgba(16, 185, 129, 0.2); color: var(--success-color); }
+        
+        .stat-info {
+            flex: 1;
+        }
+        
+        .stat-value {
+            font-size: 32px;
+            font-weight: 900;
+            color: var(--light-text);
+            line-height: 1;
+            margin-bottom: 4px;
+        }
+        
+        .stat-label {
+            font-size: 13px;
+            color: var(--light-text-tertiary);
+            font-weight: 600;
+        }
+        
+        .no-dtc-message {
+            text-align: center;
+            padding: var(--space-3xl) var(--space-xl);
+            background: var(--dark-card);
+            border-radius: var(--radius-xl);
+            border: 2px dashed var(--dark-border);
+            margin-bottom: var(--space-xl);
+        }
+        
+        .no-dtc-message i {
+            font-size: 64px;
+            color: var(--success-color);
+            margin-bottom: var(--space-lg);
+            opacity: 0.7;
+        }
+        
+        .no-dtc-message h3 {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--light-text);
+            margin-bottom: var(--space-sm);
+        }
+        
+        .no-dtc-message p {
+            font-size: 14px;
+            color: var(--light-text-tertiary);
+            max-width: 500px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+        
+        .modal-content.diagnostic {
+            max-width: 900px;
+        }
+        
+        .dtc-details {
+            display: flex;
+            gap: var(--space-xl);
+            margin-bottom: var(--space-xl);
+        }
+        
+        .dtc-detail-main {
+            flex: 2;
+        }
+        
+        .dtc-detail-side {
+            flex: 1;
+        }
+        
+        .detail-section {
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: var(--radius-lg);
+            padding: var(--space-lg);
+            margin-bottom: var(--space-lg);
+            border: 1px solid var(--dark-border);
+        }
+        
+        .detail-section h4 {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--light-text);
+            margin-bottom: var(--space-md);
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+        }
+        
+        .detail-section h4 i {
+            color: var(--primary-color);
+        }
+        
+        .suggested-action {
+            background: rgba(16, 185, 129, 0.1);
+            border-left: 4px solid var(--success-color);
+            padding: var(--space-md) var(--space-lg);
+            border-radius: var(--radius-md);
+            margin-top: var(--space-md);
+        }
+        
+        .suggested-action h5 {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--success-color);
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+        }
+        
+        .suggested-action p {
+            font-size: 13px;
+            color: var(--light-text-secondary);
+            line-height: 1.5;
+        }
+        
+        @media (max-width: 1024px) {
+            .dtc-grid {
+                grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            }
+            
+            .readiness-grid {
+                grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            }
+            
+            .dtc-details {
+                flex-direction: column;
+                gap: var(--space-lg);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .dtc-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .readiness-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .freeze-frame-table {
+                display: block;
+                overflow-x: auto;
+            }
+            
+            .diagnostic-actions {
+                flex-direction: column;
+            }
+            
+            .dtc-stats {
+                gap: var(--space-md);
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .readiness-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .stat-card {
+                min-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="main-nav">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <i class="fas fa-car-battery"></i>
+                <div>
+                    <h1>OBD-II DIAGNOSTICS</h1>
+                    <div class="nav-tagline">Professional Automotive Diagnostic Center</div>
+                </div>
+            </div>
+            
+            <button class="nav-mobile-toggle" id="mobileToggle">
+                <i class="fas fa-bars"></i>
+            </button>
+            
+            <div class="nav-links" id="navLinks">
+                <a href="index.html" class="nav-link">
+                    <i class="fas fa-dashboard"></i> Dashboard
+                </a>
+                <a href="diagnostics.html" class="nav-link active">
+                    <i class="fas fa-engine-warning"></i> Diagnostics
+                </a>
+                <button class="btn-export" id="exportAll">
+                    <i class="fas fa-file-export"></i> Export All
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Header -->
+        <div class="dashboard-header diagnostic-highlight">
+            <div class="vehicle-status">
+                <div class="status-indicator connected"></div>
+                <div class="status-info">
+                    <div class="status-text">Diagnostics Module Active</div>
+                    <div class="vehicle-details">
+                        <span><i class="fas fa-microchip"></i> ECU: Bosch MED17.5.5</span>
+                        <span><i class="fas fa-bolt"></i> Protocol: ISO15765-4 CAN</span>
+                        <span><i class="fas fa-car"></i> VIN: 1HGCM82633A123456</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="system-info">
+                <div class="info-item">
+                    <i class="fas fa-clock"></i>
+                    <span>Last Scan: <strong id="lastScanTime">Just now</strong></span>
+                </div>
+                <div class="info-item">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>Diagnostic Mode: <strong>Enhanced</strong></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Diagnostic Stats -->
+        <div class="dtc-stats">
+            <div class="stat-card">
+                <div class="stat-icon critical">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-value" id="criticalCount">3</div>
+                    <div class="stat-label">Critical DTCs</div>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon warning">
+                    <i class="fas fa-exclamation-circle"></i>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-value" id="warningCount">7</div>
+                    <div class="stat-label">Warning DTCs</div>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon total">
+                    <i class="fas fa-bug"></i>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-value" id="totalCount">10</div>
+                    <div class="stat-label">Total DTCs</div>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon ready">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-value" id="readyCount">6/8</div>
+                    <div class="stat-label">Monitors Ready</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Diagnostic Actions -->
+        <div class="diagnostic-actions">
+            <button class="btn-diagnostic action-full" id="scanAll">
+                <i class="fas fa-satellite-dish"></i>
+                Scan All Systems
+            </button>
+            
+            <button class="btn-diagnostic success" id="clearCodes">
+                <i class="fas fa-broom"></i>
+                Clear All Codes
+            </button>
+            
+            <button class="btn-diagnostic info" id="readinessTest">
+                <i class="fas fa-vial"></i>
+                Run Readiness Test
+            </button>
+            
+            <button class="btn-diagnostic" id="freezeFrame">
+                <i class="fas fa-snowflake"></i>
+                Capture Freeze Frame
+            </button>
+        </div>
+
+        <!-- Diagnostic Trouble Codes Section -->
+        <section class="kpi-section">
+            <div class="section-header">
+                <div>
+                    <h2 class="section-title">
+                        <i class="fas fa-engine-warning"></i>
+                        Diagnostic Trouble Codes
+                    </h2>
+                    <p class="section-subtitle">Active and pending fault codes detected in vehicle systems</p>
+                </div>
+                <div class="section-controls">
+                    <div class="refresh-rate">
+                        <i class="fas fa-sync-alt"></i>
+                        Auto-refresh: <strong>5s</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dtc-grid" id="dtcContainer">
+                <!-- DTC Cards will be populated here by JavaScript -->
+            </div>
+
+            <!-- No DTCs message (hidden by default) -->
+            <div class="no-dtc-message" id="noDtcMessage" style="display: none;">
+                <i class="fas fa-check-circle"></i>
+                <h3>No Diagnostic Trouble Codes Found</h3>
+                <p>All vehicle systems are operating within normal parameters. No active or pending fault codes detected during the last diagnostic scan.</p>
+                <button class="btn-primary" style="margin-top: var(--space-lg);">
+                    <i class="fas fa-sync"></i> Rescan Systems
+                </button>
+            </div>
+        </section>
+
+        <!-- Monitor Readiness Section -->
+        <section class="kpi-section">
+            <div class="section-header">
+                <div>
+                    <h2 class="section-title">
+                        <i class="fas fa-clipboard-check"></i>
+                        Monitor Readiness Status
+                    </h2>
+                    <p class="section-subtitle">Emission system monitor completion status (Required for smog check)</p>
+                </div>
+            </div>
+
+            <div class="readiness-grid" id="readinessContainer">
+                <!-- Readiness cards will be populated here by JavaScript -->
+            </div>
+        </section>
+
+        <!-- Freeze Frame Data Section -->
+        <section class="kpi-section">
+            <div class="section-header">
+                <div>
+                    <h2 class="section-title">
+                        <i class="fas fa-snowflake"></i>
+                        Freeze Frame Data
+                    </h2>
+                    <p class="section-subtitle">Vehicle parameters captured at the time of the most recent fault</p>
+                </div>
+                <div class="section-controls">
+                    <button class="btn-small" id="exportFreeze">
+                        <i class="fas fa-download"></i> Export
+                    </button>
+                </div>
+            </div>
+
+            <table class="freeze-frame-table" id="freezeFrameTable">
+                <thead>
+                    <tr>
+                        <th>Parameter</th>
+                        <th>Value</th>
+                        <th>Unit</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="freezeFrameBody">
+                    <!-- Freeze frame data will be populated here by JavaScript -->
+                </tbody>
+            </table>
+        </section>
+
+        <!-- Diagnostic Charts Section -->
+        <section class="kpi-section">
+            <div class="section-header">
+                <div>
+                    <h2 class="section-title">
+                        <i class="fas fa-chart-line"></i>
+                        Diagnostic Parameter Trends
+                    </h2>
+                    <p class="section-subtitle">Real-time monitoring of critical diagnostic parameters</p>
+                </div>
+                <div class="section-controls">
+                    <select class="btn-small" id="chartSelect">
+                        <option value="fuel">Fuel System</option>
+                        <option value="ignition">Ignition System</option>
+                        <option value="emissions">Emission System</option>
+                        <option value="engine">Engine Performance</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <canvas id="diagnosticChart"></canvas>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <div class="dashboard-footer">
+            <div class="footer-content">
+                <div class="footer-left">
+                    <div class="connection-stats">
+                        <div class="stat-item">
+                            <i class="fas fa-wifi"></i>
+                            <span class="stat-label">Diagnostic Session</span>
+                            <span class="stat-value">Active</span>
+                        </div>
+                        <div class="stat-item">
+                            <i class="fas fa-clock"></i>
+                            <span class="stat-label">Session Duration</span>
+                            <span class="stat-value" id="sessionTimer">00:05:32</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="footer-center">
+                    <div class="performance-stats">
+                        <div class="stat-item">
+                            <i class="fas fa-microchip"></i>
+                            <span class="stat-label">ECU Response Time</span>
+                            <span class="stat-value">48ms</span>
+                        </div>
+                        <div class="stat-item">
+                            <i class="fas fa-database"></i>
+                            <span class="stat-label">Data Points</span>
+                            <span class="stat-value">1,247</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="footer-right">
+                    <div class="data-stats">
+                        <div class="stat-item">
+                            <i class="fas fa-history"></i>
+                            <span class="stat-label">Last Code Clear</span>
+                            <span class="stat-value">2024-01-15</span>
+                        </div>
+                        <div class="stat-item">
+                            <i class="fas fa-shield-alt"></i>
+                            <span class="stat-label">Security Access</span>
+                            <span class="stat-value">Level 3</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="footer-copyright">
+                <p>OBD-II Professional Diagnostic System - Embedded software for IoT , DISI TN</p>
+               </div>
+        </div>
+    </div>
+
+    <!-- DTC Detail Modal -->
+    <div class="modal-overlay" id="dtcModal">
+        <div class="modal-content diagnostic">
+            <div class="modal-header">
+                <h3><i class="fas fa-bug"></i> <span id="modalDtcCode">P0300</span> Diagnostic Details</h3>
+                <button class="modal-close" id="closeModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="dtc-details">
+                    <div class="dtc-detail-main">
+                        <div class="detail-section">
+                            <h4><i class="fas fa-file-alt"></i> Code Description</h4>
+                            <p id="modalDtcDescription">Random/Multiple Cylinder Misfire Detected</p>
+                            
+                            <div class="suggested-action">
+                                <h5><i class="fas fa-lightbulb"></i> Suggested Action</h5>
+                                <p id="modalSuggestedAction">Check ignition system components including spark plugs, coils, and wiring. Inspect fuel delivery system and perform compression test if necessary.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="detail-section">
+                            <h4><i class="fas fa-history"></i> Code History</h4>
+                            <p><strong>First Detected:</strong> <span id="modalFirstDetected">2024-01-15 14:30:22</span></p>
+                            <p><strong>Last Occurrence:</strong> <span id="modalLastOccurrence">2024-01-20 09:15:45</span></p>
+                            <p><strong>Occurrence Count:</strong> <span id="modalOccurrenceCount">12</span> times</p>
+                            <p><strong>Code Cleared:</strong> <span id="modalClearedCount">3</span> times</p>
+                        </div>
+                        
+                        <div class="detail-section">
+                            <h4><i class="fas fa-cogs"></i> Affected Systems</h4>
+                            <div id="modalAffectedSystems">
+                                <!-- Affected systems will be added here -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="dtc-detail-side">
+                        <div class="detail-section">
+                            <h4><i class="fas fa-info-circle"></i> Code Information</h4>
+                            <p><strong>Type:</strong> <span id="modalDtcType" class="dtc-badge dtc-critical">Powertrain</span></p>
+                            <p><strong>Severity:</strong> <span id="modalSeverity" class="dtc-badge dtc-critical">Critical</span></p>
+                            <p><strong>Status:</strong> <span id="modalStatus" class="dtc-badge dtc-critical">Active</span></p>
+                            <p><strong>Repair Priority:</strong> <span id="modalPriority">High</span></p>
+                        </div>
+                        
+                        <div class="detail-section">
+                            <h4><i class="fas fa-tools"></i> Quick Actions</h4>
+                            <button class="btn-small" style="width: 100%; margin-bottom: 8px;">
+                                <i class="fas fa-snowflake"></i> View Freeze Frame
+                            </button>
+                            <button class="btn-small" style="width: 100%; margin-bottom: 8px;">
+                                <i class="fas fa-chart-line"></i> Parameter Graph
+                            </button>
+                            <button class="btn-small" style="width: 100%; margin-bottom: 8px;">
+                                <i class="fas fa-book"></i> Repair Guide
+                            </button>
+                            <button class="btn-small" style="width: 100%; background: var(--danger-color); color: white;">
+                                <i class="fas fa-trash"></i> Clear This Code
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary">
+                    <i class="fas fa-print"></i> Print Report
+                </button>
+                <button class="btn-primary">
+                    <i class="fas fa-download"></i> Export Details
+                </button>
+            </div>
+        </div>
+    </div>
+
+   <!-- JavaScript per la diagnostica -->
+<script src="js/diagnostics-script.js"></script>
+<script src="script.js"></script>
+</body>
+</html>

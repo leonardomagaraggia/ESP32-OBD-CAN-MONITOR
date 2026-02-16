@@ -1,0 +1,43 @@
+# /main/CMakeLists.txt
+
+idf_component_register(
+    SRCS
+        "app_main.c"
+        "can/can_bus.c"
+        "obd/obd.c"
+        "obd/obd_data.c"
+        "web/web_server.c"
+	"lcd/lcd.c"
+    INCLUDE_DIRS
+        "."
+        "can"
+        "obd"
+        "web"
+	"lcd"
+    REQUIRES
+        esp_http_server
+        driver
+        nvs_flash
+        esp_wifi
+        esp_netif
+        esp_event
+        lwip
+    EMBED_FILES 
+        "web/index.html"
+        "web/graph.html"
+        "web/errors.html"
+        "web/diagnostics.html"
+        "web/script.js"
+        "web/style.css"
+        "web/js/chart-script.js"
+        "web/js/animations.js"
+        "web/js/diagnostics-script.js"
+        "web/lib/chart.js"
+        "web/lib/luxox.js"
+        "web/fonts/font-awesome/css/all.min.css"
+        "web/fonts/font-awesome/webfonts/fa-solid-900.woff2"
+        "web/fonts/font-awesome/webfonts/fa-regular-400.woff2"
+        "web/fonts/font-awesome/webfonts/fa-brands-400.woff2"
+        "web/fonts/Inter-Bold.woff2"
+        "web/fonts/Inter-Regular.woff2"
+)
