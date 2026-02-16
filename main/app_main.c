@@ -70,18 +70,32 @@ static void wifi_init(void)
 /* =======================================================
  * 2. TASK AGGIORNAMENTO DISPLAY
  * ======================================================= */
+ 
 static void lcd_update_task(void *pvParameters)
 {
-    char buf[17];
+    int rpm;
+    float temperature;
+    int clients;
+    float battery;
+
+    char line1[17];
+    char line2[17];
+
 
     while (1) {
-        lcd_gotoxy(0, 0);
-        snprintf(buf, sizeof(buf), "AP:%2d |TEMP:%2d°", s_active_clients, get_temp());
-        lcd_print(buf);
+        
+        
+        rpm = get_rpm();
+        temperature = get_temp();
+        clients = s_active_clients;
+        battery = get_battery();
+        snprintf(line1, sizeof(line1), " AP:%d | T:%0.1f C", clients, temperature);
+        snprintf(line2, sizeof(line2), "+%0.1fV| RPM:%4u", battery, rpm);
 
-        lcd_gotoxy(0, 1);
-        snprintf(buf, sizeof(buf), "+%4.1fV |RPM:%4u", get_battery(),get_rpm());
-        lcd_print(buf);
+        lcd_gotoxy(0, 0);
+        lcd_print(line1);
+        lcd_gotoxy(0, 1);        
+        lcd_print(line2);
 
         vTaskDelay(pdMS_TO_TICKS(400));
     }
@@ -103,8 +117,9 @@ void app_main(void)
     obd_init();
 
     wifi_init();
-    web_server_start();
     lcd_init();
+    web_server_start();
+    
 
 
 
